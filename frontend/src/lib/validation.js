@@ -101,3 +101,83 @@ export const customerSchema = z.object({
   postal_code: z.string().max(20).optional().nullable().or(z.literal('')),
 })
 
+
+// ============================================================================
+// Catalog Schemas (Module M2)
+// ============================================================================
+
+export const taxSchema = z
+  .object({
+    name: z.string().min(1, 'Tax name is required').max(100),
+    type: z.enum(['percentage', 'fixed'], { errorMap: () => ({ message: 'Tax type must be percentage or fixed' }) }),
+    rate: z
+      .union([z.string(), z.number()])
+      .transform((val) => Number(val))
+      .refine((val) => !isNaN(val) && val >= 0, 'Rate must be a non-negative number'),
+    is_active: z.boolean().default(true),
+  })
+  .refine(
+    (data) => {
+      if (data.type === 'percentage') {
+        return data.rate <= 100;
+      }
+      return true;
+    },
+    {
+      message: 'Percentage rate cannot exceed 100%',
+      path: ['rate'],
+    }
+  );
+
+export const paymentTermSchema = z.object({
+  name: z.string().min(1, 'Payment term name is required').max(100),
+  due_days: z
+    .union([z.string(), z.number()])
+    .transform((val) => Number(val))
+    .refine((val) => Number.isInteger(val) && val >= 0 && val <= 365, 'Due days must be an integer between 0 and 365'),
+});
+
+export const productVariantSchema = z.object({
+  id: z.number().optional(),
+  attribute: z.string().min(1, 'Attribute is required').max(100),
+  value: z.string().min(1, 'Value is required').max(100),
+  extra_price: z
+    .union([z.string(), z.number()])
+    .transform((val) => (val === '' || val === null || val === undefined ? 0 : Number(val)))
+    .refine((val) => !isNaN(val) && val >= 0, 'Extra price must be >= 0')
+    .default(0),
+});
+
+export const productSchema = z
+  .object({
+    name: z.string().min(1, 'Product name is required').max(255),
+    type: z.enum(['service', 'goods'], { errorMap: () => ({ message: 'Product type must be service or goods' }) }),
+    sales_price: z
+      .union([z.string(), z.number()])
+      .transform((val) => Number(val))
+      .refine((val) => !isNaN(val) && val >= 0, 'Sales price must be >= 0'),
+    cost_price: z
+      .union([z.string(), z.number()])
+      .transform((val) => Number(val))
+      .refine((val) => !isNaN(val) && val >= 0, 'Cost price must be >= 0'),
+    tax_id: z.union([z.string(), z.number()]).optional().nullable(),
+    notes: z.string().max(2000).optional().nullable().or(z.literal('')),
+    is_active: z.boolean().default(true),
+    variants: z.array(productVariantSchema).default([]),
+  })
+  .refine(
+    (data) => {
+      if (!data.variants || data.variants.length <= 1) return true;
+      const seen = new Set();
+      for (const v of data.variants) {
+        const key = `${v.attribute.trim().toLowerCase()}:${v.value.trim().toLowerCase()}`;
+        if (seen.has(key)) return false;
+        seen.add(key);
+      }
+      return true;
+    },
+    {
+      message: 'Duplicate variant attribute and value combination',
+      path: ['variants'],
+    }
+  );

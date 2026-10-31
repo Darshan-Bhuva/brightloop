@@ -96,7 +96,7 @@ export const router = createBrowserRouter([
             children: [
               { path: '/users', element: <UsersList /> },
               { path: '/products/new', element: <ProductForm /> },
-              { path: '/products/:id/edit', element: <ProductForm /> },
+
               { path: '/plans/new', element: <PlanForm /> },
               { path: '/plans/:id/edit', element: <PlanForm /> },
               { path: '/discounts/new', element: <DiscountForm /> },
@@ -112,6 +112,8 @@ export const router = createBrowserRouter([
               { path: '/customers', element: <CustomersList /> },
               { path: '/customers/:id', element: <CustomerDetail /> },
               { path: '/products', element: <ProductsList /> },
+              { path: '/products/:id/edit', element: <ProductForm /> },
+
               { path: '/plans', element: <PlansList /> },
               { path: '/discounts', element: <DiscountsList /> },
               { path: '/settings/taxes', element: <TaxesPage /> },
