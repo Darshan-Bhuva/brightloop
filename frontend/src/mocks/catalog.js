@@ -90,6 +90,137 @@ export let mockProducts = [
   },
 ];
 
+export let mockPlans = [
+  {
+    id: 1,
+    name: 'Monthly Starter',
+    price: '999.00',
+    billing_period: 'monthly',
+    min_quantity: 1,
+    start_date: '2026-01-01',
+    end_date: null,
+    tax_id: 3,
+    tax: { id: 3, name: 'GST 18%', rate: '18.00' },
+    auto_close: false,
+    closable: true,
+    pausable: true,
+    renewable: true,
+    is_active: true,
+    is_available: true,
+  },
+  {
+    id: 2,
+    name: 'Yearly Business',
+    price: '9999.00',
+    billing_period: 'yearly',
+    min_quantity: 5,
+    start_date: '2026-01-01',
+    end_date: null,
+    tax_id: 3,
+    tax: { id: 3, name: 'GST 18%', rate: '18.00' },
+    auto_close: true,
+    closable: false,
+    pausable: false,
+    renewable: true,
+    is_active: true,
+    is_available: true,
+  },
+  {
+    id: 3,
+    name: 'Weekly Trial',
+    price: '199.00',
+    billing_period: 'weekly',
+    min_quantity: 1,
+    start_date: '2026-01-01',
+    end_date: null,
+    tax_id: 3,
+    tax: { id: 3, name: 'GST 18%', rate: '18.00' },
+    auto_close: true,
+    closable: true,
+    pausable: false,
+    renewable: false,
+    is_active: true,
+    is_available: true,
+  },
+  {
+    id: 4,
+    name: 'Daily Pass',
+    price: '49.00',
+    billing_period: 'daily',
+    min_quantity: 1,
+    start_date: '2026-01-01',
+    end_date: null,
+    tax_id: 3,
+    tax: { id: 3, name: 'GST 18%', rate: '18.00' },
+    auto_close: false,
+    closable: true,
+    pausable: false,
+    renewable: false,
+    is_active: true,
+    is_available: true,
+  },
+];
+
+export let mockDiscounts = [
+  {
+    id: 1,
+    name: 'Volume 10%',
+    code: 'VOL10',
+    type: 'percentage',
+    value: '10.00',
+    applies_to: 'products',
+    product_ids: [2],
+    products: [{ id: 2, name: 'Brightloop CRM Seat' }],
+    min_purchase: null,
+    min_quantity: 10,
+    start_date: '2026-09-01',
+    end_date: '2027-04-30',
+    usage_limit: null,
+    used_count: 0,
+    remaining_uses: null,
+    state: 'active',
+    is_active: true,
+  },
+  {
+    id: 2,
+    name: 'Loyalty 500 Off',
+    code: 'LOYAL500',
+    type: 'fixed',
+    value: '500.00',
+    applies_to: 'subscription',
+    product_ids: [],
+    products: [],
+    min_purchase: '5000.00',
+    min_quantity: null,
+    start_date: '2026-01-01',
+    end_date: '2027-12-31',
+    usage_limit: 5,
+    used_count: 0,
+    remaining_uses: 5,
+    state: 'active',
+    is_active: true,
+  },
+  {
+    id: 3,
+    name: 'Expired Promo',
+    code: 'EXPIRED20',
+    type: 'percentage',
+    value: '20.00',
+    applies_to: 'subscription',
+    product_ids: [],
+    products: [],
+    min_purchase: null,
+    min_quantity: null,
+    start_date: '2026-01-01',
+    end_date: '2026-10-20',
+    usage_limit: null,
+    used_count: 10,
+    remaining_uses: 0,
+    state: 'expired',
+    is_active: false,
+  },
+];
+
 // --- Mock Handlers ---
 
 export function getMockTaxes(params = {}) {
@@ -182,7 +313,6 @@ export function updateMockPaymentTerm(id, data) {
 
 export function deleteMockPaymentTerm(id) {
   const numId = Number(id);
-  // Default protected seed IDs
   if (numId === 1 || numId === 3) {
     throw {
       response: {
@@ -306,7 +436,6 @@ export function updateMockProduct(id, data) {
 
 export function deleteMockProduct(id) {
   const numId = Number(id);
-  // If product is in use by subscriptions (e.g. ID 1, 2)
   if (numId === 1) {
     throw {
       response: {
@@ -319,3 +448,20 @@ export function deleteMockProduct(id) {
   return mockSuccessEnvelope(null, null, 'Product deleted successfully');
 }
 
+export function getMockPlans(params = {}) {
+  let list = [...mockPlans];
+  if (params.search) {
+    const q = params.search.toLowerCase();
+    list = list.filter((p) => p.name.toLowerCase().includes(q));
+  }
+  return mockSuccessEnvelope(list, null);
+}
+
+export function getMockDiscounts(params = {}) {
+  let list = [...mockDiscounts];
+  if (params.search) {
+    const q = params.search.toLowerCase();
+    list = list.filter((d) => d.name.toLowerCase().includes(q) || (d.code && d.code.toLowerCase().includes(q)));
+  }
+  return mockSuccessEnvelope(list, null);
+}

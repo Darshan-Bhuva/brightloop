@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { mockable } from './mockable';
+import { mockable, mockSuccessEnvelope } from './mockable';
 import {
   getMockTaxes,
   createMockTax,
@@ -14,7 +14,12 @@ import {
   createMockProduct,
   updateMockProduct,
   deleteMockProduct,
-} from '../mocks/catalog';
+  mockPlans,
+  mockDiscounts,
+  mockTaxes,
+  mockPaymentTerms,
+  mockProducts,
+} from '@/mocks/catalog';
 
 // ============================================================================
 // TAXES (TAX-01 .. TAX-04)
@@ -26,7 +31,16 @@ import {
  */
 export async function getTaxes(params = {}) {
   return mockable(
-    () => apiClient.get('/taxes', { params }),
+    async () => {
+      try {
+        return await apiClient.get('/taxes', { params });
+      } catch (err) {
+        if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
+          return mockSuccessEnvelope(mockTaxes);
+        }
+        throw err;
+      }
+    },
     () => getMockTaxes(params)
   );
 }
@@ -75,7 +89,16 @@ export async function deleteTax(id) {
  */
 export async function getPaymentTerms(params = {}) {
   return mockable(
-    () => apiClient.get('/payment-terms', { params }),
+    async () => {
+      try {
+        return await apiClient.get('/payment-terms', { params });
+      } catch (err) {
+        if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
+          return mockSuccessEnvelope(mockPaymentTerms);
+        }
+        throw err;
+      }
+    },
     () => getMockPaymentTerms(params)
   );
 }
@@ -124,7 +147,16 @@ export async function deletePaymentTerm(id) {
  */
 export async function getProducts(params = {}) {
   return mockable(
-    () => apiClient.get('/products', { params }),
+    async () => {
+      try {
+        return await apiClient.get('/products', { params });
+      } catch (err) {
+        if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
+          return mockSuccessEnvelope(mockProducts);
+        }
+        throw err;
+      }
+    },
     () => getMockProducts(params)
   );
 }
@@ -174,3 +206,48 @@ export async function deleteProduct(id) {
   );
 }
 
+// ============================================================================
+// PLANS (PLN-01) - for quotation & subscription selection
+// ============================================================================
+
+/**
+ * Fetch plans list (supports all=1)
+ */
+export async function getPlans(params = {}) {
+  return mockable(
+    async () => {
+      try {
+        return await apiClient.get('/plans', { params });
+      } catch (err) {
+        if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
+          return mockSuccessEnvelope(mockPlans);
+        }
+        throw err;
+      }
+    },
+    () => mockSuccessEnvelope(mockPlans)
+  );
+}
+
+// ============================================================================
+// DISCOUNTS (DSC-01) - for subscription discounts selection
+// ============================================================================
+
+/**
+ * Fetch discounts list (supports all=1)
+ */
+export async function getDiscounts(params = {}) {
+  return mockable(
+    async () => {
+      try {
+        return await apiClient.get('/discounts', { params });
+      } catch (err) {
+        if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
+          return mockSuccessEnvelope(mockDiscounts);
+        }
+        throw err;
+      }
+    },
+    () => mockSuccessEnvelope(mockDiscounts)
+  );
+}
