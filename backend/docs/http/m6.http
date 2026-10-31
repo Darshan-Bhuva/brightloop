@@ -1,0 +1,31 @@
+@baseUrl = http://localhost:8000/api
+@token = paste-access-token-here
+# Get a token from AUTH-02 (POST /auth/login) and paste it into @token.
+# Seeded logins: admin@brightloop.test / Admin@12345, staff@brightloop.test / Staff@12345, customer@brightloop.test / Customer@12345
+# Ids follow a fresh `migrate:fresh --seed`: invoice 1 = INV-000001 (paid, Demo Customer, payment 1),
+# invoice 2 = INV-000002 (confirmed, overdue, Acme Corp), invoice 3 = INV-000003 (draft). Replace as needed.
+
+### PAY-01 List payments (A,S all; C own) - filters: invoice_id, customer_id, method, date_from, date_to, search
+GET {{baseUrl}}/payments?method=upi&date_from=2026-01-01&date_to=2026-12-31&search=INV-&sort=payment_date&direction=desc&page=1&per_page=15
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### PAY-02 Record payment (A,S) - invoice must be confirmed; amount <= invoice amount_due
+POST {{baseUrl}}/payments
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "invoice_id": 2,
+  "method": "upi",
+  "amount": "500.00",
+  "payment_date": "2026-10-31",
+  "reference": "UPI-REF-1001",
+  "note": "Partial payment received via UPI"
+}
+
+### PAY-03 Delete payment (A only) - reverses amounts; paid -> confirmed when due again
+DELETE {{baseUrl}}/payments/2
+Accept: application/json
+Authorization: Bearer {{token}}
