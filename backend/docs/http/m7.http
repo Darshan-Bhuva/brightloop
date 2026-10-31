@@ -1,0 +1,24 @@
+@baseUrl = http://localhost:8000/api
+@token = paste-admin-or-staff-token-here
+@customerToken = paste-customer-token-here
+# Seeded logins: admin@brightloop.test / Admin@12345, staff@brightloop.test / Staff@12345, customer@brightloop.test / Customer@12345
+
+### RPT-01 Reports Summary (Admin, Staff)
+GET {{baseUrl}}/reports/summary?date_from=2026-10-01&date_to=2026-10-31
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### RPT-02 Revenue Trend (Admin, Staff)
+GET {{baseUrl}}/reports/revenue-trend?date_from=2026-05-01&date_to=2026-10-31&interval=month
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### RPT-03 Overdue Aging (Admin, Staff - P1)
+GET {{baseUrl}}/reports/overdue-aging
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### PORTAL-01 Customer Summary (Customer)
+GET {{baseUrl}}/portal/summary
+Accept: application/json
+Authorization: Bearer {{customerToken}}

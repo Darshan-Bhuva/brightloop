@@ -1,292 +1,552 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   Repeat,
   DollarSign,
-  AlertTriangle,
-  FileCheck,
   TrendingUp,
+  FileCheck,
+  AlertTriangle,
+  RefreshCw,
+  ExternalLink,
+  ArrowUpRight,
 } from 'lucide-react'
-import { Card, CardHeader, CardContent } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
 import {
-  DataTable,
-  FilterBar,
-  StatusBadge,
-  MoneyText,
-  DateText,
-} from '@/components/common'
-import { SUBSCRIPTION_STATUSES } from '@/lib/constants'
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  Legend,
+} from 'recharts'
+import { getReportsSummary, getRevenueTrend, getOverdueAging } from '@/api/reports'
+import { getInvoices } from '@/api/invoices'
+import { handleApiError } from '@/lib/errors'
+import { formatMoney, formatDate } from '@/lib/format'
+import { Card, CardHeader, CardContent, CardTitle, CardDescription } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Badge } from '@/components/ui/badge'
+import {
+  Table,
+  TableHeader,
+  TableBody,
+  TableHead,
+  TableRow,
+  TableCell,
+} from '@/components/ui/table'
+
+const DATE_PRESETS = [
+  { label: 'This Month', key: 'this_month' },
+  { label: 'Last Month', key: 'last_month' },
+  { label: 'This Year', key: 'this_year' },
+  { label: 'Custom', key: 'custom' },
+]
 
 export default function DashboardPage() {
-  const [search, setSearch] = useState('')
-  const [statusFilter, setStatusFilter] = useState('')
-  const [sortField, setSortField] = useState('number')
-  const [sortDir, setSortDir] = useState('asc')
-  const [page, setPage] = useState(1)
-  const [perPage, setPerPage] = useState(15)
+  const [searchParams, setSearchParams] = useSearchParams()
 
-  const kpis = [
-    { title: 'ACTIVE SUBSCRIPTIONS', value: '1,800', note: '+12% from last cycle', icon: Repeat },
-    { title: 'ESTIMATED MRR', value: '₹12,50,000.00', note: 'Monthly run rate', icon: DollarSign },
-    { title: 'COLLECTED (MTD)', value: '₹7,50,000.00', note: '83% collection rate', icon: FileCheck },
-    { title: 'OUTSTANDING', value: '₹3,00,000.00', note: '210 open invoices', icon: TrendingUp },
-    { title: 'OVERDUE TOTAL', value: '₹90,000.00', note: '55 overdue invoices', icon: AlertTriangle, alert: true },
-  ]
+  // Calculate default dates
+  const today = useMemo(() => new Date(), [])
+  const defaultFrom = useMemo(() => {
+    const d = new Date(today.getFullYear(), today.getMonth(), 1)
+    return d.toISOString().split('T')[0]
+  }, [today])
+  const defaultTo = useMemo(() => {
+    const d = new Date(today.getFullYear(), today.getMonth() + 1, 0)
+    return d.toISOString().split('T')[0]
+  }, [today])
 
-  const demoSubscriptions = [
-    {
-      id: 1,
-      number: 'SUB-000001',
-      customer: { id: 1, name: 'Acme Corporation' },
-      plan: { id: 1, name: 'Monthly Starter', billing_period: 'monthly' },
-      status: SUBSCRIPTION_STATUSES.ACTIVE,
-      total: '1378.82',
-      start_date: '2026-10-15',
-    },
-    {
-      id: 2,
-      number: 'SUB-000002',
-      customer: { id: 2, name: 'Stark Industries' },
-      plan: { id: 2, name: 'Yearly Business', billing_period: 'yearly' },
-      status: SUBSCRIPTION_STATUSES.ACTIVE,
-      total: '11798.82',
-      start_date: '2026-10-18',
-    },
-    {
-      id: 3,
-      number: 'SUB-000003',
-      customer: { id: 3, name: 'Wayne Enterprises' },
-      plan: { id: 1, name: 'Monthly Starter', billing_period: 'monthly' },
-      status: SUBSCRIPTION_STATUSES.CONFIRMED,
-      total: '999.00',
-      start_date: '2026-10-20',
-    },
-    {
-      id: 4,
-      number: 'SUB-000004',
-      customer: { id: 4, name: 'Cyberdyne Systems' },
-      plan: { id: 3, name: 'Weekly Trial', billing_period: 'weekly' },
-      status: SUBSCRIPTION_STATUSES.QUOTATION,
-      total: '234.82',
-      start_date: '2026-10-22',
-    },
-    {
-      id: 5,
-      number: 'SUB-000005',
-      customer: { id: 5, name: 'Umbrella Health' },
-      plan: { id: 1, name: 'Monthly Starter', billing_period: 'monthly' },
-      status: SUBSCRIPTION_STATUSES.DRAFT,
-      total: '1500.00',
-      start_date: '2026-10-25',
-    },
-  ]
+  // Initial values from query params or defaults
+  const [selectedPreset, setSelectedPreset] = useState('this_month')
+  const [dateFrom, setDateFrom] = useState(searchParams.get('date_from') || defaultFrom)
+  const [dateTo, setDateTo] = useState(searchParams.get('date_to') || defaultTo)
 
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+  // Report States
+  const [summary, setSummary] = useState(null)
+  const [revenueTrend, setRevenueTrend] = useState([])
+  const [agingData, setAgingData] = useState(null)
+  const [overdueInvoices, setOverdueInvoices] = useState([])
+  const [isLoading, setIsLoading] = useState(true)
+
+  // Apply preset calculation
+  const applyPreset = (presetKey) => {
+    setSelectedPreset(presetKey)
+    const now = new Date()
+    let from = ''
+    let to = ''
+
+    if (presetKey === 'this_month') {
+      from = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+      to = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+    } else if (presetKey === 'last_month') {
+      from = new Date(now.getFullYear(), now.getMonth() - 1, 1).toISOString().split('T')[0]
+      to = new Date(now.getFullYear(), now.getMonth(), 0).toISOString().split('T')[0]
+    } else if (presetKey === 'this_year') {
+      from = new Date(now.getFullYear(), 0, 1).toISOString().split('T')[0]
+      to = new Date(now.getFullYear(), 11, 31).toISOString().split('T')[0]
     } else {
-      setSortField(field)
-      setSortDir('asc')
+      return
     }
+
+    setDateFrom(from)
+    setDateTo(to)
+    setSearchParams({ date_from: from, date_to: to })
   }
 
-  const filteredRows = demoSubscriptions
-    .filter((sub) => {
-      const matchSearch =
-        !search ||
-        sub.number.toLowerCase().includes(search.toLowerCase()) ||
-        sub.customer.name.toLowerCase().includes(search.toLowerCase())
-      const matchStatus = !statusFilter || sub.status === statusFilter
-      return matchSearch && matchStatus
-    })
-    .sort((a, b) => {
-      let aVal = a[sortField]
-      let bVal = b[sortField]
-      if (sortField === 'customer') {
-        aVal = a.customer.name
-        bVal = b.customer.name
-      }
-      if (aVal < bVal) return sortDir === 'asc' ? -1 : 1
-      if (aVal > bVal) return sortDir === 'asc' ? 1 : -1
-      return 0
-    })
+  // Load All Dashboard Data
+  const loadDashboardData = useCallback(async () => {
+    if (dateFrom && dateTo && dateFrom > dateTo) {
+      handleApiError({ response: { status: 422, data: { message: 'Start date cannot be after end date.' } } })
+      return
+    }
 
-  const columns = [
-    {
-      key: 'number',
-      label: 'Reference',
-      sortable: true,
-      render: (val) => <span className="font-mono font-bold text-xs text-foreground">{val}</span>,
-    },
-    {
-      key: 'customer',
-      label: 'Customer',
-      sortable: true,
-      render: (_, row) => <span className="font-sans font-medium text-sm">{row.customer.name}</span>,
-    },
-    {
-      key: 'plan',
-      label: 'Plan & Period',
-      render: (_, row) => (
-        <span className="font-sans text-xs text-muted-foreground">
-          <span className="text-foreground font-medium">{row.plan.name}</span>
-          <span className="font-mono text-[11px] ml-1.5 opacity-70 capitalize">({row.plan.billing_period})</span>
-        </span>
-      ),
-    },
-    {
-      key: 'start_date',
-      label: 'Start Date',
-      sortable: true,
-      render: (val) => <DateText date={val} className="font-mono text-xs text-muted-foreground" />,
-    },
-    {
-      key: 'status',
-      label: 'Status',
-      sortable: true,
-      render: (val) => <StatusBadge status={val} type="subscription" />,
-    },
-    {
-      key: 'total',
-      label: 'Total (INR)',
-      align: 'right',
-      sortable: true,
-      render: (val) => <MoneyText amount={val} className="text-right font-mono font-semibold text-xs" />,
-    },
-  ]
+    setIsLoading(true)
+    try {
+      const [sumRes, trendRes, agingRes, overdueRes] = await Promise.all([
+        getReportsSummary({ date_from: dateFrom, date_to: dateTo }),
+        getRevenueTrend({ date_from: dateFrom, date_to: dateTo, interval: 'month' }),
+        getOverdueAging(),
+        getInvoices({ overdue: true, sort: 'due_date', direction: 'asc', per_page: 10 }),
+      ])
+
+      setSummary(sumRes.data)
+      setRevenueTrend(trendRes.data || [])
+      setAgingData(agingRes.data)
+      setOverdueInvoices(overdueRes.data || [])
+    } catch (err) {
+      handleApiError(err)
+    } finally {
+      setIsLoading(false)
+    }
+  }, [dateFrom, dateTo])
+
+  useEffect(() => {
+    loadDashboardData()
+  }, [loadDashboardData])
+
+  // Recharts custom numeric format helper
+  const currencyFormatter = (val) => {
+    if (val >= 1000000) return `₹${(val / 1000000).toFixed(1)}M`
+    if (val >= 1000) return `₹${(val / 1000).toFixed(0)}k`
+    return `₹${val}`
+  }
 
   return (
-    <div className="space-y-8 max-w-7xl mx-auto">
-      {/* Top Header Section */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between border-b border-border pb-6">
+    <div className="space-y-6 max-w-7xl">
+      {/* Top Header & Date Range Controls */}
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 pb-3 border-b border-border">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-              Overview
-            </span>
-            <span className="text-muted-foreground">/</span>
-            <Badge variant="signal" className="text-[10px]">
-              Brightloop Industrial System
-            </Badge>
-          </div>
-          <h1 className="font-sans text-3xl sm:text-4xl font-bold tracking-tight text-foreground uppercase">
-            Operations Dashboard
+          <h1 className="text-3xl font-heading font-semibold text-black tracking-tight">
+            Financial Dashboard
           </h1>
-          <p className="font-sans text-sm text-muted-foreground mt-1 max-w-2xl">
-            Real-time subscriber metrics, receivables, and billing pipeline performance.
+          <p className="text-xs text-zinc-500 mt-1">
+            Executive overview of recurring subscriptions, MRR velocity, revenue collection, and receivables.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
-          <Button variant="secondary" size="sm">
-            CYCLE STATUS: OK
-          </Button>
-          <Button size="sm">
-            NEW SUBSCRIPTION
-          </Button>
-        </div>
-      </div>
-
-      {/* KPI Cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-        {kpis.map((kpi) => {
-          const Icon = kpi.icon
-          return (
-            <Card
-              key={kpi.title}
-              className={`p-1 ${
-                kpi.alert
-                  ? 'border-primary bg-primary/5'
-                  : 'border-border bg-card'
-              }`}
-            >
-              <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0 p-4">
-                <span className="font-mono text-[11px] font-semibold tracking-wider text-muted-foreground">
-                  {kpi.title}
-                </span>
-                <Icon
-                  className={`h-4 w-4 ${
-                    kpi.alert ? 'text-primary' : 'text-muted-foreground'
-                  }`}
-                />
-              </CardHeader>
-              <CardContent className="p-4 pt-0">
-                <div
-                  className={`font-sans text-2xl font-bold tracking-tight ${
-                    kpi.alert ? 'text-primary' : 'text-foreground'
-                  }`}
-                >
-                  {kpi.value}
-                </div>
-                <p className="font-mono text-[11px] text-muted-foreground mt-1.5">
-                  {kpi.note}
-                </p>
-              </CardContent>
-            </Card>
-          )
-        })}
-      </div>
-
-      {/* FilterBar Demo */}
-      <FilterBar
-        search={search}
-        onSearchChange={setSearch}
-        searchPlaceholder="Filter subscriptions..."
-        filters={[
-          {
-            key: 'status',
-            label: 'All Statuses',
-            value: statusFilter,
-            onChange: setStatusFilter,
-            options: [
-              { label: 'Draft', value: SUBSCRIPTION_STATUSES.DRAFT },
-              { label: 'Quotation', value: SUBSCRIPTION_STATUSES.QUOTATION },
-              { label: 'Confirmed', value: SUBSCRIPTION_STATUSES.CONFIRMED },
-              { label: 'Active', value: SUBSCRIPTION_STATUSES.ACTIVE },
-              { label: 'Closed', value: SUBSCRIPTION_STATUSES.CLOSED },
-            ],
-          },
-        ]}
-        onReset={() => {
-          setSearch('')
-          setStatusFilter('')
-        }}
-      />
-
-      {/* Reusable DataTable Demo with Sort Headers and Server Pagination */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <h2 className="font-sans text-lg font-bold uppercase tracking-tight text-foreground">
-              Recent Subscriptions
-            </h2>
-            <Badge variant="secondary" className="font-mono text-[10px]">
-              {filteredRows.length} RECORDS
-            </Badge>
+        <div className="flex flex-wrap items-center gap-2.5">
+          {/* Preset Buttons */}
+          <div className="flex items-center rounded-sm border border-border bg-white p-0.5">
+            {DATE_PRESETS.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => applyPreset(p.key)}
+                className={`px-3 py-1 text-xs font-mono transition-colors rounded-sm ${
+                  selectedPreset === p.key
+                    ? 'bg-black text-white font-semibold'
+                    : 'text-zinc-600 hover:text-black hover:bg-zinc-100'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
           </div>
-          <span className="font-mono text-xs text-muted-foreground">
-            Server Pagination & Sort Header Demo
-          </span>
-        </div>
 
-        <DataTable
-          columns={columns}
-          data={filteredRows}
-          sort={sortField}
-          direction={sortDir}
-          onSort={handleSort}
-          page={page}
-          perPage={perPage}
-          onPageChange={setPage}
-          onPerPageChange={setPerPage}
-          meta={{
-            current_page: page,
-            last_page: 1,
-            per_page: perPage,
-            total: filteredRows.length,
-          }}
-        />
+          {/* Custom Date Pickers */}
+          {selectedPreset === 'custom' && (
+            <div className="flex items-center gap-1.5 bg-white p-1 rounded-sm border border-border">
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value)
+                  setSearchParams({ date_from: e.target.value, date_to: dateTo })
+                }}
+                className="h-7 text-xs border-zinc-200 font-mono w-32"
+              />
+              <span className="text-xs text-zinc-400">to</span>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value)
+                  setSearchParams({ date_from: dateFrom, date_to: e.target.value })
+                }}
+                className="h-7 text-xs border-zinc-200 font-mono w-32"
+              />
+            </div>
+          )}
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={loadDashboardData}
+            disabled={isLoading}
+            className="rounded-sm border-border text-black hover:bg-zinc-50 h-8 text-xs"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${isLoading ? 'animate-spin' : ''}`} />
+            Refresh
+          </Button>
+        </div>
+      </div>
+
+      {/* KPI Cards Row (5 Key Metrics) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+        {/* KPI 1: Active Subscriptions */}
+        <Link to="/subscriptions?status=active" className="block group">
+          <Card className="rounded-md border border-border bg-white shadow-none hover:border-black transition-colors h-full">
+            <CardContent className="p-4 flex flex-col justify-between h-full">
+              <div className="flex items-center justify-between text-zinc-500">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider">
+                  Active Subs
+                </span>
+                <Repeat className="h-4 w-4 text-zinc-400 group-hover:text-black transition-colors" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-mono font-bold text-black">
+                  {summary ? summary.subscriptions.active.toLocaleString() : '-'}
+                </div>
+                <div className="flex items-center justify-between mt-1 text-[11px] text-zinc-500">
+                  <span>Total: {summary?.subscriptions.total}</span>
+                  {summary?.subscriptions.paused > 0 && (
+                    <span className="text-amber-700 font-medium">
+                      {summary.subscriptions.paused} paused
+                    </span>
+                  )}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* KPI 2: MRR */}
+        <Card className="rounded-md border border-border bg-white shadow-none">
+          <CardContent className="p-4 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between text-zinc-500">
+              <span className="text-[11px] font-mono font-semibold uppercase tracking-wider">
+                Monthly Run Rate
+              </span>
+              <DollarSign className="h-4 w-4 text-zinc-400" />
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl font-mono font-bold text-black">
+                {summary ? formatMoney(summary.mrr) : '-'}
+              </div>
+              <p className="text-[11px] text-zinc-500 mt-1">Normalized active MRR</p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KPI 3: Collected in Period */}
+        <Card className="rounded-md border border-border bg-white shadow-none">
+          <CardContent className="p-4 flex flex-col justify-between h-full">
+            <div className="flex items-center justify-between text-zinc-500">
+              <span className="text-[11px] font-mono font-semibold uppercase tracking-wider">
+                Collected (Period)
+              </span>
+              <FileCheck className="h-4 w-4 text-zinc-400" />
+            </div>
+            <div className="mt-3">
+              <div className="text-2xl font-mono font-bold text-black">
+                {summary ? formatMoney(summary.revenue.collected_in_period) : '-'}
+              </div>
+              <p className="text-[11px] text-zinc-500 mt-1">
+                Invoiced: {summary ? formatMoney(summary.revenue.invoiced_in_period) : '-'}
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* KPI 4: Outstanding Receivables */}
+        <Link to="/invoices?status=confirmed" className="block group">
+          <Card className="rounded-md border border-border bg-white shadow-none hover:border-black transition-colors h-full">
+            <CardContent className="p-4 flex flex-col justify-between h-full">
+              <div className="flex items-center justify-between text-zinc-500">
+                <span className="text-[11px] font-mono font-semibold uppercase tracking-wider">
+                  Outstanding
+                </span>
+                <TrendingUp className="h-4 w-4 text-zinc-400 group-hover:text-black transition-colors" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-mono font-bold text-black">
+                  {summary ? formatMoney(summary.receivables.outstanding_amount) : '-'}
+                </div>
+                <p className="text-[11px] text-zinc-500 mt-1">
+                  {summary?.receivables.outstanding_count} open invoices
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+
+        {/* KPI 5: Overdue Receivables (Alert Color) */}
+        <Link to="/invoices?overdue=true" className="block group">
+          <Card className="rounded-md border border-rose-300 bg-rose-50/40 shadow-none hover:border-primary transition-colors h-full">
+            <CardContent className="p-4 flex flex-col justify-between h-full">
+              <div className="flex items-center justify-between text-primary">
+                <span className="text-[11px] font-mono font-bold uppercase tracking-wider">
+                  Overdue Total
+                </span>
+                <AlertTriangle className="h-4 w-4 text-primary" />
+              </div>
+              <div className="mt-3">
+                <div className="text-2xl font-mono font-bold text-primary">
+                  {summary ? formatMoney(summary.receivables.overdue_amount) : '-'}
+                </div>
+                <p className="text-[11px] text-primary/80 font-medium mt-1">
+                  {summary?.receivables.overdue_count} overdue invoices
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        </Link>
+      </div>
+
+      {/* Charts Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Revenue Trend Chart (2 columns wide) */}
+        <Card className="rounded-md border border-border bg-white shadow-none lg:col-span-2">
+          <CardHeader className="p-4 pb-2 border-b border-border flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-xs font-mono font-semibold uppercase text-zinc-600">
+                Revenue Invoiced vs Collected
+              </CardTitle>
+              <CardDescription className="text-[11px] text-zinc-500 mt-0.5">
+                Monthly cash realization trend across contract cycles (RPT-02).
+              </CardDescription>
+            </div>
+            <Badge variant="outline" className="text-[10px] font-mono bg-zinc-50">
+              Monthly Trend
+            </Badge>
+          </CardHeader>
+          <CardContent className="p-4 pt-6">
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={revenueTrend} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                  <XAxis
+                    dataKey="period"
+                    tick={{ fill: '#71717A', fontSize: 11, fontFamily: 'monospace' }}
+                    axisLine={{ stroke: '#E5E7EB' }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    tickFormatter={currencyFormatter}
+                    tick={{ fill: '#71717A', fontSize: 11, fontFamily: 'monospace' }}
+                    axisLine={{ stroke: '#E5E7EB' }}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(val) => [formatMoney(val), '']}
+                    contentStyle={{
+                      backgroundColor: '#FFFFFF',
+                      borderColor: '#E5E7EB',
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      fontSize: '12px',
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="top"
+                    align="right"
+                    wrapperStyle={{ fontSize: '11px', fontFamily: 'monospace', paddingBottom: '12px' }}
+                  />
+                  <Bar dataKey="invoiced" name="Invoiced" fill="#18181B" radius={[2, 2, 0, 0]} />
+                  <Bar dataKey="collected" name="Collected" fill="#F81927" radius={[2, 2, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Overdue Aging Chart (P1) */}
+        <Card className="rounded-md border border-border bg-white shadow-none lg:col-span-1">
+          <CardHeader className="p-4 pb-2 border-b border-border">
+            <CardTitle className="text-xs font-mono font-semibold uppercase text-zinc-600">
+              Receivables Aging Buckets
+            </CardTitle>
+            <CardDescription className="text-[11px] text-zinc-500 mt-0.5">
+              Outstanding overdue amounts grouped by overdue days (RPT-03).
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="p-4 pt-6">
+            <div className="h-72 w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={agingData?.buckets || []}
+                  layout="vertical"
+                  margin={{ top: 10, right: 20, left: 20, bottom: 0 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#E5E7EB" />
+                  <XAxis
+                    type="number"
+                    tickFormatter={currencyFormatter}
+                    tick={{ fill: '#71717A', fontSize: 10, fontFamily: 'monospace' }}
+                    axisLine={{ stroke: '#E5E7EB' }}
+                    tickLine={false}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="label"
+                    tick={{ fill: '#000000', fontSize: 11, fontFamily: 'monospace', fontWeight: 600 }}
+                    axisLine={{ stroke: '#E5E7EB' }}
+                    tickLine={false}
+                  />
+                  <Tooltip
+                    formatter={(val) => [formatMoney(val), 'Amount Overdue']}
+                    contentStyle={{
+                      backgroundColor: '#FFFFFF',
+                      borderColor: '#E5E7EB',
+                      borderRadius: '4px',
+                      fontFamily: 'monospace',
+                      fontSize: '12px',
+                    }}
+                  />
+                  <Bar dataKey="amount" fill="#F81927" radius={[0, 2, 2, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Subscription Breakdown & Top Overdue Table Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Subscriptions Status Breakdown */}
+        <Card className="rounded-md border border-border bg-white shadow-none lg:col-span-1">
+          <CardHeader className="p-4 pb-2 border-b border-border">
+            <CardTitle className="text-xs font-mono font-semibold uppercase text-zinc-600">
+              Contracts by Status
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-4 space-y-3">
+            {summary?.subscriptions.by_status && (
+              <div className="space-y-2.5">
+                {Object.entries(summary.subscriptions.by_status).map(([st, count]) => {
+                  const pct = Math.round((count / (summary.subscriptions.total || 1)) * 100)
+                  return (
+                    <div key={st} className="space-y-1">
+                      <div className="flex items-center justify-between text-xs font-mono">
+                        <span className="uppercase text-zinc-700 font-semibold">{st}</span>
+                        <span className="text-zinc-500">
+                          {count} ({pct}%)
+                        </span>
+                      </div>
+                      <div className="h-1.5 w-full bg-zinc-100 rounded-full overflow-hidden">
+                        <div
+                          className={`h-full ${
+                            st === 'active'
+                              ? 'bg-black'
+                              : st === 'closed'
+                              ? 'bg-zinc-400'
+                              : 'bg-primary'
+                          }`}
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+            <div className="pt-3 border-t border-border flex items-center justify-between text-xs text-zinc-500">
+              <span>New in period: +{summary?.subscriptions.new_in_period}</span>
+              <span>Closed in period: {summary?.subscriptions.closed_in_period}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Top Overdue Invoices Table (2 columns wide) */}
+        <Card className="rounded-md border border-border bg-white shadow-none lg:col-span-2">
+          <CardHeader className="p-4 pb-2 border-b border-border flex flex-row items-center justify-between">
+            <div>
+              <CardTitle className="text-xs font-mono font-semibold uppercase text-zinc-600 flex items-center gap-2">
+                <AlertTriangle className="h-3.5 w-3.5 text-primary" />
+                <span>Top Overdue Invoices</span>
+              </CardTitle>
+              <CardDescription className="text-[11px] text-zinc-500 mt-0.5">
+                Urgent receivables requiring payment collection follow-up.
+              </CardDescription>
+            </div>
+            <Link
+              to="/invoices?overdue=true"
+              className="text-xs font-mono text-primary hover:underline flex items-center gap-1"
+            >
+              <span>View all overdue</span>
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </Link>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader className="bg-zinc-50/50">
+                <TableRow className="border-b border-border">
+                  <TableHead className="text-xs font-mono font-semibold uppercase text-zinc-600">Invoice</TableHead>
+                  <TableHead className="text-xs font-mono font-semibold uppercase text-zinc-600">Customer</TableHead>
+                  <TableHead className="text-xs font-mono font-semibold uppercase text-zinc-600">Due Date</TableHead>
+                  <TableHead className="text-xs font-mono font-semibold uppercase text-zinc-600">Aging</TableHead>
+                  <TableHead className="text-xs font-mono font-semibold uppercase text-zinc-600 text-right">Amount Due</TableHead>
+                  <TableHead className="text-xs font-mono font-semibold uppercase text-zinc-600 text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {overdueInvoices.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-8 text-zinc-400 text-xs italic">
+                      No overdue invoices currently recorded. All accounts in good standing.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  overdueInvoices.slice(0, 5).map((inv) => (
+                    <TableRow key={inv.id} className="border-b border-border hover:bg-zinc-50/50">
+                      <TableCell className="font-mono text-xs font-semibold text-black">
+                        <Link
+                          to={`/invoices/${inv.id}`}
+                          className="hover:text-primary hover:underline"
+                        >
+                          {inv.number}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-xs font-medium text-black">
+                        {inv.customer?.name}
+                      </TableCell>
+                      <TableCell className="text-xs font-mono text-zinc-600">
+                        {formatDate(inv.due_date)}
+                      </TableCell>
+                      <TableCell>
+                        <Badge className="bg-rose-100 text-primary border border-rose-200 text-[10px] font-mono">
+                          {inv.days_overdue}d overdue
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-xs font-mono font-semibold text-primary text-right">
+                        {formatMoney(inv.amount_due)}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Link to={`/invoices/${inv.id}`}>
+                          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-zinc-600 hover:text-black">
+                            <ExternalLink className="h-3 w-3" />
+                          </Button>
+                        </Link>
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )
