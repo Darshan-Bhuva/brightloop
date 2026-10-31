@@ -5,6 +5,7 @@ export const TOKEN_KEY = 'bl_token'
 
 export const apiClient = axios.create({
   baseURL: API_URL,
+  timeout: 8000,
   headers: {
     Accept: 'application/json',
     'Content-Type': 'application/json',

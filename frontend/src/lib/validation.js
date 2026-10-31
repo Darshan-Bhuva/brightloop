@@ -231,6 +231,19 @@ export const subscriptionSchema = z
   )
   .refine(
     (data) => {
+      // lines is required when quotation_template_id is not present
+      if (!data.quotation_template_id && (!data.lines || data.lines.length === 0)) {
+        return false
+      }
+      return true
+    },
+    {
+      message: 'The lines field is required when quotation template id is not present.',
+      path: ['lines'],
+    }
+  )
+  .refine(
+    (data) => {
       if (data.start_date && data.expiry_date) {
         return data.expiry_date > data.start_date
       }
