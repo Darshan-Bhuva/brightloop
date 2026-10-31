@@ -11,6 +11,7 @@ import {
   Info,
   Sparkles,
   AlertTriangle,
+  AlertCircle,
 } from 'lucide-react'
 import {
   createSubscription,
@@ -91,6 +92,30 @@ export default function SubscriptionForm() {
   const selectedPlan = useMemo(() => {
     return plans.find((p) => String(p.id) === String(watchedPlanId)) || null
   }, [plans, watchedPlanId])
+
+  // Extract lines error message from react-hook-form
+  const lineErrorMessage = useMemo(() => {
+    return (
+      errors.lines?.message ||
+      errors.lines?.root?.message ||
+      (errors.lines && typeof errors.lines === 'object' && !Array.isArray(errors.lines) && errors.lines.message
+        ? errors.lines.message
+        : null)
+    )
+  }, [errors.lines])
+
+  // Extract all errors for summary banner
+  const allErrorsList = useMemo(() => {
+    const list = []
+    if (errors.customer_id?.message) list.push(errors.customer_id.message)
+    if (errors.plan_id?.message) list.push(errors.plan_id.message)
+    if (errors.payment_term_id?.message) list.push(errors.payment_term_id.message)
+    if (errors.start_date?.message) list.push(errors.start_date.message)
+    if (errors.expiry_date?.message) list.push(errors.expiry_date.message)
+    if (lineErrorMessage) list.push(lineErrorMessage)
+    if (errors.root?.message) list.push(errors.root.message)
+    return [...new Set(list)]
+  }, [errors, lineErrorMessage])
 
   // Load Dependencies and Subscription (if edit)
   const loadFormData = useCallback(async () => {
@@ -369,6 +394,20 @@ export default function SubscriptionForm() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Global Form Validation Error Banner */}
+        {allErrorsList.length > 0 && (
+          <div className="p-4 bg-rose-50 border border-rose-200 rounded-sm text-xs text-rose-700 flex items-start gap-3">
+            <AlertCircle className="h-5 w-5 text-rose-600 shrink-0 mt-0.5" />
+            <div className="space-y-1">
+              <p className="font-semibold text-rose-900">Please correct the following errors:</p>
+              <ul className="list-disc list-inside space-y-0.5 text-rose-700">
+                {allErrorsList.map((msg, i) => (
+                  <li key={i}>{msg}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
         {/* Template Quick-Start Banner (Only for New) */}
         {!isEdit && quotationTemplates.length > 0 && (
           <Card className="rounded-md border border-zinc-200 bg-zinc-50/50 shadow-none">
@@ -578,6 +617,12 @@ export default function SubscriptionForm() {
             </Button>
           </CardHeader>
           <CardContent className="p-0">
+            {lineErrorMessage && (
+              <div className="mx-4 my-3 p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-sm flex items-center gap-2">
+                <AlertCircle className="h-4 w-4 shrink-0 text-rose-600" />
+                <span className="font-medium">{lineErrorMessage}</span>
+              </div>
+            )}
             <Table>
               <TableHeader className="bg-zinc-50/50">
                 <TableRow className="border-b border-border">
@@ -720,7 +765,19 @@ export default function SubscriptionForm() {
                 {fields.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-6 text-zinc-400 text-xs italic">
-                      No additional products added yet. Click &ldquo;Add Product Line&rdquo; to attach services or goods.
+                      {lineErrorMessage ? (
+                        <div className="flex flex-col items-center justify-center gap-1.5 text-rose-600 not-italic">
+                          <div className="flex items-center gap-1.5 font-medium">
+                            <AlertCircle className="h-4 w-4" />
+                            <span>{lineErrorMessage}</span>
+                          </div>
+                          <span className="text-[11px] text-zinc-500">
+                            Click &ldquo;Add Product Line&rdquo; above to attach at least one product.
+                          </span>
+                        </div>
+                      ) : (
+                        <span>No additional products added yet. Click &ldquo;Add Product Line&rdquo; to attach services or goods.</span>
+                      )}
                     </TableCell>
                   </TableRow>
                 )}

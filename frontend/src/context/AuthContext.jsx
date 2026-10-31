@@ -69,7 +69,11 @@ export function AuthProvider({ children }) {
           const res = await getMe()
           authUser = res?.data?.user
           authCustomer = res?.data?.customer
-        } catch {
+        } catch (err) {
+          // If network connection failed or timed out, avoid cascading another hung request
+          if (err?.code === 'ECONNABORTED' || !err?.response) {
+            throw err
+          }
           const pingRes = await pingAuth()
           authUser = pingRes?.data?.user || pingRes?.data
         }
