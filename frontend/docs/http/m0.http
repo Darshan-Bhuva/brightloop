@@ -1,0 +1,29 @@
+@baseUrl = http://localhost:8000/api
+@token = paste-access-token-here
+
+### Module M6: Payments Endpoints
+
+### PAY-01 List payments (Admin, Staff all; Customer own)
+GET {{baseUrl}}/payments?method=upi&sort=payment_date&direction=desc&page=1&per_page=15
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### PAY-02 Record payment against confirmed invoice (Admin, Staff)
+POST {{baseUrl}}/payments
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "invoice_id": 2,
+  "method": "upi",
+  "amount": "500.00",
+  "payment_date": "2026-10-31",
+  "reference": "UPI-SETTLE-101",
+  "note": "Partial settlement for confirmed invoice"
+}
+
+### PAY-03 Delete payment and reverse invoice balances (Admin only)
+DELETE {{baseUrl}}/payments/1
+Accept: application/json
+Authorization: Bearer {{token}}

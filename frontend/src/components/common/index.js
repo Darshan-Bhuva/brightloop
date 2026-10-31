@@ -11,3 +11,4 @@ export { FormField } from './FormField';
 export { default as Logo } from './Logo';
 export { default as PlaceholderPage } from './PlaceholderPage';
 
+export { RecordPaymentDialog } from './RecordPaymentDialog';
