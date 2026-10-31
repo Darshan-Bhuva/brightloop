@@ -268,3 +268,28 @@ export const runBillingSchema = z.object({
 export const bulkConfirmInvoicesSchema = z.object({
   ids: z.array(z.coerce.number()).min(1, 'Select at least one invoice to confirm').max(500, 'Maximum 500 invoices per bulk confirm'),
 })
+
+
+// ============================================================================
+// Module M6: Payments Validation
+// ============================================================================
+
+export const recordPaymentSchema = z.object({
+  invoice_id: z.coerce.number().min(1, 'Invoice is required'),
+  method: z.enum(['cash', 'bank_transfer', 'card', 'upi', 'cheque', 'other'], {
+    errorMap: () => ({ message: 'Please select a valid payment method' }),
+  }),
+  amount: z
+    .union([z.string(), z.number()])
+    .transform((val) => Number(val))
+    .refine((val) => !isNaN(val) && val > 0, 'Amount must be greater than 0'),
+  payment_date: z
+    .string()
+    .min(1, 'Payment date is required')
+    .refine((val) => {
+      const today = new Date().toISOString().split('T')[0]
+      return val <= today
+    }, 'Payment date cannot be in the future'),
+  reference: z.string().max(100, 'Reference cannot exceed 100 characters').optional().nullable().or(z.literal('')),
+  note: z.string().max(500, 'Note cannot exceed 500 characters').optional().nullable().or(z.literal('')),
+})

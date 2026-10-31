@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import {
   FileText,
+  CreditCard,
   Search,
   RotateCw,
   CheckCircle,
@@ -24,6 +25,7 @@ import { MoneyText } from '@/components/common/MoneyText'
 import { DateText } from '@/components/common/DateText'
 import { EmptyState } from '@/components/common/EmptyState'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { RecordPaymentDialog } from '@/components/common/RecordPaymentDialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Badge } from '@/components/ui/badge'
@@ -76,6 +78,7 @@ export default function InvoicesList() {
 
   // Modal dialog states
   const [confirmDialog, setConfirmDialog] = useState({ open: false, invoiceId: null })
+  const [paymentDialog, setPaymentDialog] = useState({ open: false, invoice: null })
   const [bulkConfirmOpen, setBulkConfirmOpen] = useState(false)
   const [cancelDialog, setCancelDialog] = useState({ open: false, invoiceId: null, reason: '' })
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -380,6 +383,16 @@ export default function InvoicesList() {
                   </DropdownMenuItem>
                 )}
 
+                {allowed.includes('record_payment') && (
+                  <DropdownMenuItem
+                    onClick={() => setPaymentDialog({ open: true, invoice: row })}
+                    className="cursor-pointer text-primary focus:text-primary"
+                  >
+                    <CreditCard className="mr-2 h-4 w-4" />
+                    Record Payment
+                  </DropdownMenuItem>
+                )}
+
                 {allowed.includes('send') && (
                   <DropdownMenuItem
                     onClick={() => handleSendInvoice(row.id)}
@@ -475,7 +488,18 @@ export default function InvoicesList() {
           <Switch
             id="overdue-toggle"
             checked={overdueOnly}
-            onCheckedChange={(checked) => updateParam('overdue', checked)}
+            onCheckedChange={(checked) => {
+              if (checked) {
+                const next = new URLSearchParams(searchParams)
+                next.set('overdue', 'true')
+                setSearchParams(next, { replace: true })
+                setSortField('due_date')
+                setSortDirection('asc')
+                setPage(1)
+              } else {
+                updateParam('overdue', false)
+              }
+            }}
           />
           <Label htmlFor="overdue-toggle" className="text-xs font-medium cursor-pointer flex items-center gap-1.5">
             <AlertCircle className="h-3.5 w-3.5 text-destructive" />
@@ -602,6 +626,14 @@ export default function InvoicesList() {
             }
           />
         }
+      />
+
+      {/* Record Payment Dialog */}
+      <RecordPaymentDialog
+        open={paymentDialog.open}
+        onOpenChange={(open) => setPaymentDialog({ open, invoice: null })}
+        invoice={paymentDialog.invoice}
+        onSuccess={() => fetchInvoices()}
       />
 
       {/* Confirm Single Invoice Dialog */}
