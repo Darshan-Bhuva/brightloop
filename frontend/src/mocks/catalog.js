@@ -465,3 +465,142 @@ export function getMockDiscounts(params = {}) {
   }
   return mockSuccessEnvelope(list, null);
 }
+
+
+export function getMockPlan(id) {
+  const plan = mockPlans.find((p) => p.id === Number(id));
+  if (!plan) {
+    throw { response: { status: 404, data: { success: false, message: 'Plan not found' } } };
+  }
+  return mockSuccessEnvelope(plan);
+}
+
+export function createMockPlan(data) {
+  const newId = mockPlans.length > 0 ? Math.max(...mockPlans.map((p) => p.id)) + 1 : 1;
+  const tax = mockTaxes.find((t) => t.id === Number(data.tax_id)) || null;
+  const newPlan = {
+    id: newId,
+    name: data.name,
+    price: Number(data.price).toFixed(2),
+    billing_period: data.billing_period,
+    min_quantity: Number(data.min_quantity || 1),
+    start_date: data.start_date,
+    end_date: data.end_date || null,
+    tax_id: data.tax_id ? Number(data.tax_id) : null,
+    tax: tax ? { id: tax.id, name: tax.name, rate: tax.rate } : null,
+    auto_close: Boolean(data.auto_close),
+    closable: data.closable !== undefined ? Boolean(data.closable) : true,
+    pausable: Boolean(data.pausable),
+    renewable: Boolean(data.renewable),
+    is_active: data.is_active !== undefined ? Boolean(data.is_active) : true,
+    is_available: true,
+  };
+  mockPlans.push(newPlan);
+  return mockSuccessEnvelope(newPlan, null, 'Plan created successfully');
+}
+
+export function updateMockPlan(id, data) {
+  const plan = mockPlans.find((p) => p.id === Number(id));
+  if (!plan) {
+    throw { response: { status: 404, data: { success: false, message: 'Plan not found' } } };
+  }
+  const tax = data.tax_id ? mockTaxes.find((t) => t.id === Number(data.tax_id)) : plan.tax;
+  Object.assign(plan, {
+    name: data.name ?? plan.name,
+    price: data.price ? Number(data.price).toFixed(2) : plan.price,
+    billing_period: data.billing_period ?? plan.billing_period,
+    min_quantity: data.min_quantity ? Number(data.min_quantity) : plan.min_quantity,
+    start_date: data.start_date ?? plan.start_date,
+    end_date: data.end_date !== undefined ? data.end_date : plan.end_date,
+    tax_id: data.tax_id !== undefined ? (data.tax_id ? Number(data.tax_id) : null) : plan.tax_id,
+    tax: tax ? { id: tax.id, name: tax.name, rate: tax.rate } : null,
+    auto_close: data.auto_close !== undefined ? Boolean(data.auto_close) : plan.auto_close,
+    closable: data.closable !== undefined ? Boolean(data.closable) : plan.closable,
+    pausable: data.pausable !== undefined ? Boolean(data.pausable) : plan.pausable,
+    renewable: data.renewable !== undefined ? Boolean(data.renewable) : plan.renewable,
+    is_active: data.is_active !== undefined ? Boolean(data.is_active) : plan.is_active,
+  });
+  return mockSuccessEnvelope(plan, null, 'Plan updated successfully');
+}
+
+export function deleteMockPlan(id) {
+  const numId = Number(id);
+  const exists = mockPlans.some((p) => p.id === numId);
+  if (!exists) {
+    throw { response: { status: 404, data: { success: false, message: 'Plan not found' } } };
+  }
+  mockPlans = mockPlans.filter((p) => p.id !== numId);
+  return mockSuccessEnvelope(null, null, 'Plan deleted successfully');
+}
+
+export function getMockDiscount(id) {
+  const discount = mockDiscounts.find((d) => d.id === Number(id));
+  if (!discount) {
+    throw { response: { status: 404, data: { success: false, message: 'Discount not found' } } };
+  }
+  return mockSuccessEnvelope(discount);
+}
+
+export function createMockDiscount(data) {
+  const newId = mockDiscounts.length > 0 ? Math.max(...mockDiscounts.map((d) => d.id)) + 1 : 1;
+  const productIds = (data.product_ids || []).map(Number);
+  const matchedProducts = mockProducts.filter((p) => productIds.includes(p.id)).map((p) => ({ id: p.id, name: p.name }));
+
+  const newDiscount = {
+    id: newId,
+    name: data.name,
+    code: data.code || null,
+    type: data.type,
+    value: Number(data.value).toFixed(2),
+    applies_to: data.applies_to,
+    product_ids: productIds,
+    products: matchedProducts,
+    min_purchase: data.min_purchase ? Number(data.min_purchase).toFixed(2) : null,
+    min_quantity: data.min_quantity ? Number(data.min_quantity) : null,
+    start_date: data.start_date,
+    end_date: data.end_date,
+    usage_limit: data.usage_limit ? Number(data.usage_limit) : null,
+    used_count: 0,
+    remaining_uses: data.usage_limit ? Number(data.usage_limit) : null,
+    state: 'active',
+    is_active: data.is_active !== undefined ? Boolean(data.is_active) : true,
+  };
+  mockDiscounts.push(newDiscount);
+  return mockSuccessEnvelope(newDiscount, null, 'Discount created successfully');
+}
+
+export function updateMockDiscount(id, data) {
+  const discount = mockDiscounts.find((d) => d.id === Number(id));
+  if (!discount) {
+    throw { response: { status: 404, data: { success: false, message: 'Discount not found' } } };
+  }
+  const productIds = data.product_ids ? data.product_ids.map(Number) : discount.product_ids;
+  const matchedProducts = mockProducts.filter((p) => productIds.includes(p.id)).map((p) => ({ id: p.id, name: p.name }));
+
+  Object.assign(discount, {
+    name: data.name ?? discount.name,
+    code: data.code !== undefined ? (data.code || null) : discount.code,
+    type: data.type ?? discount.type,
+    value: data.value ? Number(data.value).toFixed(2) : discount.value,
+    applies_to: data.applies_to ?? discount.applies_to,
+    product_ids: productIds,
+    products: matchedProducts,
+    min_purchase: data.min_purchase !== undefined ? (data.min_purchase ? Number(data.min_purchase).toFixed(2) : null) : discount.min_purchase,
+    min_quantity: data.min_quantity !== undefined ? (data.min_quantity ? Number(data.min_quantity) : null) : discount.min_quantity,
+    start_date: data.start_date ?? discount.start_date,
+    end_date: data.end_date ?? discount.end_date,
+    usage_limit: data.usage_limit !== undefined ? (data.usage_limit ? Number(data.usage_limit) : null) : discount.usage_limit,
+    is_active: data.is_active !== undefined ? Boolean(data.is_active) : discount.is_active,
+  });
+  return mockSuccessEnvelope(discount, null, 'Discount updated successfully');
+}
+
+export function deleteMockDiscount(id) {
+  const numId = Number(id);
+  const exists = mockDiscounts.some((d) => d.id === numId);
+  if (!exists) {
+    throw { response: { status: 404, data: { success: false, message: 'Discount not found' } } };
+  }
+  mockDiscounts = mockDiscounts.filter((d) => d.id !== numId);
+  return mockSuccessEnvelope(null, null, 'Discount deleted successfully');
+}
