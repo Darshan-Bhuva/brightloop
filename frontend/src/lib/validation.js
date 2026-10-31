@@ -258,3 +258,164 @@ export const subscriptionSchema = z
 export const subscriptionCloseSchema = z.object({
   reason: z.string().max(255, 'Reason cannot exceed 255 characters').optional().or(z.literal('')),
 })
+
+
+// ============================================================================
+// Module M5: Invoicing & Billing Engine Validation
+// ============================================================================
+
+export const updateInvoiceSchema = z.object({
+  due_date: z.string().optional().nullable().or(z.literal('')),
+  notes: z.string().max(1000, 'Notes cannot exceed 1000 characters').optional().nullable().or(z.literal('')),
+})
+
+export const cancelInvoiceSchema = z.object({
+  reason: z.string().max(255, 'Cancel reason cannot exceed 255 characters').optional().or(z.literal('')),
+})
+
+export const runBillingSchema = z.object({
+  as_of_date: z.string().min(1, 'As-of date is required'),
+  subscription_ids: z.array(z.coerce.number()).optional(),
+})
+
+export const bulkConfirmInvoicesSchema = z.object({
+  ids: z.array(z.coerce.number()).min(1, 'Select at least one invoice to confirm').max(500, 'Maximum 500 invoices per bulk confirm'),
+})
+
+
+// ============================================================================
+// Module M6: Payments Validation
+// ============================================================================
+
+export const recordPaymentSchema = z.object({
+  invoice_id: z.coerce.number().min(1, 'Invoice is required'),
+  method: z.enum(['cash', 'bank_transfer', 'card', 'upi', 'cheque', 'other'], {
+    errorMap: () => ({ message: 'Please select a valid payment method' }),
+  }),
+  amount: z
+    .union([z.string(), z.number()])
+    .transform((val) => Number(val))
+    .refine((val) => !isNaN(val) && val > 0, 'Amount must be greater than 0'),
+  payment_date: z
+    .string()
+    .min(1, 'Payment date is required')
+    .refine((val) => {
+      const today = new Date().toISOString().split('T')[0]
+      return val <= today
+    }, 'Payment date cannot be in the future'),
+  reference: z.string().max(100, 'Reference cannot exceed 100 characters').optional().nullable().or(z.literal('')),
+  note: z.string().max(500, 'Note cannot exceed 500 characters').optional().nullable().or(z.literal('')),
+})
+
+
+// ============================================================================
+// Module M3 / M8: Plans & Discounts Validation
+// ============================================================================
+
+export const planSchema = z
+  .object({
+    name: z.string().min(1, 'Plan name is required').max(255),
+    price: z
+      .union([z.string(), z.number()])
+      .transform((val) => Number(val))
+      .refine((val) => !isNaN(val) && val >= 0, 'Price must be >= 0'),
+    billing_period: z.enum(['daily', 'weekly', 'monthly', 'yearly'], {
+      errorMap: () => ({ message: 'Please select a valid billing period' }),
+    }),
+    min_quantity: z
+      .union([z.string(), z.number()])
+      .transform((val) => (val === '' || val === null ? 1 : Number(val)))
+      .refine((val) => Number.isInteger(val) && val >= 1, 'Minimum quantity must be >= 1')
+      .default(1),
+    start_date: z.string().min(1, 'Start date is required'),
+    end_date: z.string().optional().nullable().or(z.literal('')),
+    tax_id: z.union([z.string(), z.number()]).optional().nullable(),
+    auto_close: z.boolean().default(false),
+    closable: z.boolean().default(true),
+    pausable: z.boolean().default(false),
+    renewable: z.boolean().default(false),
+    is_active: z.boolean().default(true),
+  })
+  .refine(
+    (data) => {
+      if (data.start_date && data.end_date) {
+        return data.end_date >= data.start_date;
+      }
+      return true;
+    },
+    {
+      message: 'End date must be on or after start date',
+      path: ['end_date'],
+    }
+  );
+
+export const discountSchema = z
+  .object({
+    name: z.string().min(1, 'Discount name is required').max(255),
+    code: z.string().max(50).optional().nullable().or(z.literal('')),
+    type: z.enum(['fixed', 'percentage'], {
+      errorMap: () => ({ message: 'Please select fixed or percentage' }),
+    }),
+    value: z
+      .union([z.string(), z.number()])
+      .transform((val) => Number(val))
+      .refine((val) => !isNaN(val) && val > 0, 'Value must be greater than 0'),
+    applies_to: z.enum(['products', 'subscription'], {
+      errorMap: () => ({ message: 'Please select products or subscription' }),
+    }),
+    product_ids: z.array(z.coerce.number()).optional().default([]),
+    min_purchase: z
+      .union([z.string(), z.number()])
+      .transform((val) => (val === '' || val === null ? null : Number(val)))
+      .optional()
+      .nullable(),
+    min_quantity: z
+      .union([z.string(), z.number()])
+      .transform((val) => (val === '' || val === null ? null : Number(val)))
+      .optional()
+      .nullable(),
+    start_date: z.string().min(1, 'Start date is required'),
+    end_date: z.string().min(1, 'End date is required'),
+    usage_limit: z
+      .union([z.string(), z.number()])
+      .transform((val) => (val === '' || val === null ? null : Number(val)))
+      .optional()
+      .nullable(),
+    is_active: z.boolean().default(true),
+  })
+  .refine(
+    (data) => {
+      if (data.type === 'percentage' && data.value > 100) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: 'Percentage discount cannot exceed 100%',
+      path: ['value'],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.start_date && data.end_date) {
+        return data.end_date >= data.start_date;
+      }
+      return true;
+    },
+    {
+      message: 'End date must be on or after start date',
+      path: ['end_date'],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.applies_to === 'products' && (!data.product_ids || data.product_ids.length === 0)) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: 'Please select at least one product for product-level discounts',
+      path: ['product_ids'],
+    }
+  );

@@ -129,3 +129,78 @@ Authorization: Bearer {{adminToken}}
 DELETE {{baseUrl}}/discounts/1
 Accept: application/json
 Authorization: Bearer {{adminToken}}
+
+
+### Module M5: Invoicing & Billing Engine
+
+### BIL-01 List due subscriptions (Admin, Staff)
+GET {{baseUrl}}/billing/due?as_of_date=2026-10-31&page=1&per_page=15
+Accept: application/json
+Authorization: Bearer {{staffToken}}
+
+### BIL-02 Run recurring billing (Admin, Staff)
+POST {{baseUrl}}/billing/run
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "as_of_date": "2026-10-31",
+  "subscription_ids": [1, 2]
+}
+
+### INV-01 List invoices (Admin, Staff all; Customer own, never draft)
+GET {{baseUrl}}/invoices?status=draft&page=1&per_page=15
+Accept: application/json
+Authorization: Bearer {{staffToken}}
+
+### INV-01b Overdue invoices filter
+GET {{baseUrl}}/invoices?overdue=true
+Accept: application/json
+Authorization: Bearer {{staffToken}}
+
+### INV-02 Show invoice with lines and payments (Admin, Staff, Customer own)
+GET {{baseUrl}}/invoices/1
+Accept: application/json
+Authorization: Bearer {{staffToken}}
+
+### INV-03 Update draft invoice (Admin, Staff - P1)
+PUT {{baseUrl}}/invoices/3
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "due_date": "2026-11-20",
+  "notes": "Updated payment terms agreed with accounts receivable."
+}
+
+### INV-04 Confirm draft invoice (Admin, Staff)
+POST {{baseUrl}}/invoices/3/confirm
+Accept: application/json
+Authorization: Bearer {{adminToken}}
+
+### INV-05 Cancel invoice (Admin, Staff)
+POST {{baseUrl}}/invoices/3/cancel
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "reason": "Customer requested adjustment to subscription terms."
+}
+
+### INV-06 Send invoice to customer email (Admin, Staff)
+POST {{baseUrl}}/invoices/2/send
+Accept: application/json
+Authorization: Bearer {{adminToken}}
+
+### INV-07 Bulk confirm draft invoices (Admin, Staff - P1)
+POST {{baseUrl}}/invoices/bulk-confirm
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "ids": [3, 4]
+}

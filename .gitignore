@@ -8,3 +8,5 @@ Desktop.ini
 *.swp
 *.swo
 *~
+config.bat
+node_modules

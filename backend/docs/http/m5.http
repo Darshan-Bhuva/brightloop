@@ -1,0 +1,71 @@
+@baseUrl = http://localhost:8000/api
+@token = paste-access-token-here
+# Get a token from AUTH-02 (POST /auth/login) and paste it into @token.
+# Seeded logins: admin@brightloop.test / Admin@12345, staff@brightloop.test / Staff@12345, customer@brightloop.test / Customer@12345
+
+### BIL-01 Preview due subscriptions for billing (A,S)
+GET {{baseUrl}}/billing/due?as_of_date=2026-02-01
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### BIL-02 Run billing engine to generate invoices (A,S)
+POST {{baseUrl}}/billing/run
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "as_of_date": "2026-02-01",
+  "subscription_ids": [1]
+}
+
+### INV-01 List invoices with filters and overdue flags (A,S,C)
+GET {{baseUrl}}/invoices?page=1&per_page=15&status=Confirmed&overdue_only=false
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### INV-02 Show invoice details with lines, payments, and allowed actions (A,S,C)
+GET {{baseUrl}}/invoices/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### INV-03 Update invoice draft details (A,S)
+PUT {{baseUrl}}/invoices/1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "due_date": "2026-02-15",
+  "notes": "Updated invoice notes and terms"
+}
+
+### INV-04 Confirm invoice draft to Confirmed or Paid (A,S)
+POST {{baseUrl}}/invoices/1/confirm
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### INV-05 Cancel invoice and release discount usage (A,S)
+POST {{baseUrl}}/invoices/1/cancel
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "cancellation_reason": "Customer requested order adjustment"
+}
+
+### INV-06 Send invoice to customer via email (A,S)
+POST {{baseUrl}}/invoices/1/send
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### INV-07 Bulk confirm draft invoices (A,S)
+POST {{baseUrl}}/invoices/bulk-confirm
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "invoice_ids": [1, 2]
+}
