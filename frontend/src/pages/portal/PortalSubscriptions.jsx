@@ -9,7 +9,6 @@ import {
 } from 'lucide-react'
 import { getSubscriptions } from '@/api/subscriptions'
 import { handleApiError } from '@/lib/errors'
-import { formatDate } from '@/lib/format'
 import { cn } from '@/lib/utils'
 import { StatusBadge } from '@/components/common/StatusBadge'
 import { MoneyText } from '@/components/common/MoneyText'
