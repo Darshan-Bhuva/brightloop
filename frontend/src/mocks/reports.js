@@ -132,3 +132,4 @@ export function mockGetOverdueAging() {
 export function mockGetPortalSummary() {
   return mockSuccessEnvelope(mockPortalSummary)
 }
+

@@ -336,3 +336,4 @@ export function mockGetInvoice(id, userRole = 'admin') {
 
   return mockSuccessEnvelope(inv)
 }
+

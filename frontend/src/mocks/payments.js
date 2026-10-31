@@ -79,3 +79,4 @@ export function mockGetPayments(params = {}) {
     mockPaginationMeta(page, Math.ceil(total / perPage) || 1, perPage, total)
   )
 }
+

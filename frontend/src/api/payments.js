@@ -23,3 +23,4 @@ export async function getPayments(params = {}) {
     () => mockGetPayments(params)
   )
 }
+

@@ -47,3 +47,4 @@ export async function getInvoice(id, role = 'admin') {
     () => mockGetInvoice(id, role)
   )
 }
+
