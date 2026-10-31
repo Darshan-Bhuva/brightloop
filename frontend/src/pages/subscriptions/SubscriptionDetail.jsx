@@ -36,6 +36,7 @@ import {
   detachDiscount,
 } from '@/api/subscriptions'
 import { getDiscounts } from '@/api/catalog'
+import { getInvoices } from '@/api/invoices'
 import { handleApiError } from '@/lib/errors'
 import { formatMoney, formatDate, formatDateTime } from '@/lib/format'
 import { StatusBadge } from '@/components/common/StatusBadge'
@@ -82,6 +83,7 @@ export default function SubscriptionDetail() {
   const [selectedDiscountId, setSelectedDiscountId] = useState('')
   const [availableDiscounts, setAvailableDiscounts] = useState([])
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
+  const [invoices, setInvoices] = useState([])
 
   // Fetch Subscription
   const fetchSubscriptionDetails = useCallback(async () => {
@@ -89,6 +91,12 @@ export default function SubscriptionDetail() {
     try {
       const res = await getSubscription(id)
       setSubscription(res.data)
+      try {
+        const invRes = await getInvoices({ subscription_id: id })
+        setInvoices(invRes.data || [])
+      } catch (e) {
+        console.error(e)
+      }
     } catch (err) {
       handleApiError(err)
     } finally {
@@ -794,18 +802,56 @@ export default function SubscriptionDetail() {
 
       {/* Linked Invoices Section */}
       <Card className="rounded-md border border-border bg-white shadow-none">
-        <CardHeader className="p-4 pb-2 border-b border-border">
+        <CardHeader className="p-4 pb-2 border-b border-border flex flex-row items-center justify-between">
           <CardTitle className="text-xs font-mono font-semibold uppercase text-zinc-600 flex items-center gap-2">
             <Receipt className="h-3.5 w-3.5 text-zinc-400" />
             <span>Generated Invoices</span>
           </CardTitle>
+          <span className="text-xs font-mono text-zinc-500">{invoices.length} total</span>
         </CardHeader>
-        <CardContent className="p-6">
-          <EmptyState
-            icon={Receipt}
-            title="No invoices generated yet"
-            description="Recurring invoices for this subscription will appear here once billing runs are executed (Module M5)."
-          />
+        <CardContent className="p-0">
+          {invoices.length === 0 ? (
+            <div className="p-6">
+              <EmptyState
+                icon={Receipt}
+                title="No invoices generated yet"
+                description="Recurring invoices for this subscription will appear here once billing runs are executed (Module M5)."
+              />
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs font-mono">
+                <thead>
+                  <tr className="border-b border-border bg-zinc-50 text-zinc-500 font-semibold uppercase">
+                    <th className="py-2.5 px-4">Invoice #</th>
+                    <th className="py-2.5 px-4">Invoice Date</th>
+                    <th className="py-2.5 px-4">Due Date</th>
+                    <th className="py-2.5 px-4 text-right">Total</th>
+                    <th className="py-2.5 px-4 text-right">Amount Due</th>
+                    <th className="py-2.5 px-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {invoices.map((inv) => (
+                    <tr key={inv.id} className="hover:bg-zinc-50/60">
+                      <td className="py-2.5 px-4">
+                        <Link to={'/invoices/' + inv.id} className="font-semibold text-primary hover:underline">
+                          {inv.number}
+                        </Link>
+                      </td>
+                      <td className="py-2.5 px-4 text-zinc-600">{formatDate(inv.invoice_date)}</td>
+                      <td className="py-2.5 px-4 text-zinc-600">{formatDate(inv.due_date)}</td>
+                      <td className="py-2.5 px-4 text-right font-semibold">{formatMoney(inv.total)}</td>
+                      <td className="py-2.5 px-4 text-right font-semibold text-zinc-800">{formatMoney(inv.amount_due)}</td>
+                      <td className="py-2.5 px-4">
+                        <StatusBadge status={inv.status} type="invoice" />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </CardContent>
       </Card>
 

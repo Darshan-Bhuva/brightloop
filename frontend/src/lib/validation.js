@@ -245,3 +245,26 @@ export const subscriptionSchema = z
 export const subscriptionCloseSchema = z.object({
   reason: z.string().max(255, 'Reason cannot exceed 255 characters').optional().or(z.literal('')),
 })
+
+
+// ============================================================================
+// Module M5: Invoicing & Billing Engine Validation
+// ============================================================================
+
+export const updateInvoiceSchema = z.object({
+  due_date: z.string().optional().nullable().or(z.literal('')),
+  notes: z.string().max(1000, 'Notes cannot exceed 1000 characters').optional().nullable().or(z.literal('')),
+})
+
+export const cancelInvoiceSchema = z.object({
+  reason: z.string().max(255, 'Cancel reason cannot exceed 255 characters').optional().or(z.literal('')),
+})
+
+export const runBillingSchema = z.object({
+  as_of_date: z.string().min(1, 'As-of date is required'),
+  subscription_ids: z.array(z.coerce.number()).optional(),
+})
+
+export const bulkConfirmInvoicesSchema = z.object({
+  ids: z.array(z.coerce.number()).min(1, 'Select at least one invoice to confirm').max(500, 'Maximum 500 invoices per bulk confirm'),
+})
