@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import {
   Repeat,
   DollarSign,
@@ -6,19 +6,26 @@ import {
   FileCheck,
   TrendingUp,
 } from 'lucide-react'
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardContent } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import {
-  Table,
-  TableHeader,
-  TableBody,
-  TableHead,
-  TableRow,
-  TableCell,
-} from '@/components/ui/table'
+  DataTable,
+  FilterBar,
+  StatusBadge,
+  MoneyText,
+  DateText,
+} from '@/components/common'
+import { SUBSCRIPTION_STATUSES } from '@/lib/constants'
 
 export default function DashboardPage() {
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [sortField, setSortField] = useState('number')
+  const [sortDir, setSortDir] = useState('asc')
+  const [page, setPage] = useState(1)
+  const [perPage, setPerPage] = useState(15)
+
   const kpis = [
     { title: 'ACTIVE SUBSCRIPTIONS', value: '1,800', note: '+12% from last cycle', icon: Repeat },
     { title: 'ESTIMATED MRR', value: '₹12,50,000.00', note: 'Monthly run rate', icon: DollarSign },
@@ -27,28 +34,127 @@ export default function DashboardPage() {
     { title: 'OVERDUE TOTAL', value: '₹90,000.00', note: '55 overdue invoices', icon: AlertTriangle, alert: true },
   ]
 
-  const demoRows = [
-    { id: 'SUB-000001', customer: 'Acme Corp', plan: 'Monthly Starter', period: 'monthly', status: 'active', amount: '₹1,378.82', date: '2026-10-15' },
-    { id: 'SUB-000002', customer: 'Stark Industries', plan: 'Yearly Business', period: 'yearly', status: 'active', amount: '₹11,798.82', date: '2026-10-18' },
-    { id: 'SUB-000003', customer: 'Wayne Enterprises', plan: 'Monthly Starter', period: 'monthly', status: 'paused', amount: '₹999.00', date: '2026-10-20' },
-    { id: 'SUB-000004', customer: 'Cyberdyne Systems', plan: 'Weekly Trial', period: 'weekly', status: 'quotation', amount: '₹234.82', date: '2026-10-22' },
-    { id: 'SUB-000005', customer: 'Umbrella Health', plan: 'Monthly Starter', period: 'monthly', status: 'draft', amount: '₹1,500.00', date: '2026-10-25' },
+  const demoSubscriptions = [
+    {
+      id: 1,
+      number: 'SUB-000001',
+      customer: { id: 1, name: 'Acme Corporation' },
+      plan: { id: 1, name: 'Monthly Starter', billing_period: 'monthly' },
+      status: SUBSCRIPTION_STATUSES.ACTIVE,
+      total: '1378.82',
+      start_date: '2026-10-15',
+    },
+    {
+      id: 2,
+      number: 'SUB-000002',
+      customer: { id: 2, name: 'Stark Industries' },
+      plan: { id: 2, name: 'Yearly Business', billing_period: 'yearly' },
+      status: SUBSCRIPTION_STATUSES.ACTIVE,
+      total: '11798.82',
+      start_date: '2026-10-18',
+    },
+    {
+      id: 3,
+      number: 'SUB-000003',
+      customer: { id: 3, name: 'Wayne Enterprises' },
+      plan: { id: 1, name: 'Monthly Starter', billing_period: 'monthly' },
+      status: SUBSCRIPTION_STATUSES.CONFIRMED,
+      total: '999.00',
+      start_date: '2026-10-20',
+    },
+    {
+      id: 4,
+      number: 'SUB-000004',
+      customer: { id: 4, name: 'Cyberdyne Systems' },
+      plan: { id: 3, name: 'Weekly Trial', billing_period: 'weekly' },
+      status: SUBSCRIPTION_STATUSES.QUOTATION,
+      total: '234.82',
+      start_date: '2026-10-22',
+    },
+    {
+      id: 5,
+      number: 'SUB-000005',
+      customer: { id: 5, name: 'Umbrella Health' },
+      plan: { id: 1, name: 'Monthly Starter', billing_period: 'monthly' },
+      status: SUBSCRIPTION_STATUSES.DRAFT,
+      total: '1500.00',
+      start_date: '2026-10-25',
+    },
   ]
 
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'active':
-        return <Badge variant="default">ACTIVE</Badge>
-      case 'paused':
-        return <Badge variant="secondary">PAUSED</Badge>
-      case 'quotation':
-        return <Badge variant="outline">QUOTATION</Badge>
-      case 'draft':
-        return <Badge variant="subtle">DRAFT</Badge>
-      default:
-        return <Badge variant="secondary">{status.toUpperCase()}</Badge>
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    } else {
+      setSortField(field)
+      setSortDir('asc')
     }
   }
+
+  const filteredRows = demoSubscriptions
+    .filter((sub) => {
+      const matchSearch =
+        !search ||
+        sub.number.toLowerCase().includes(search.toLowerCase()) ||
+        sub.customer.name.toLowerCase().includes(search.toLowerCase())
+      const matchStatus = !statusFilter || sub.status === statusFilter
+      return matchSearch && matchStatus
+    })
+    .sort((a, b) => {
+      let aVal = a[sortField]
+      let bVal = b[sortField]
+      if (sortField === 'customer') {
+        aVal = a.customer.name
+        bVal = b.customer.name
+      }
+      if (aVal < bVal) return sortDir === 'asc' ? -1 : 1
+      if (aVal > bVal) return sortDir === 'asc' ? 1 : -1
+      return 0
+    })
+
+  const columns = [
+    {
+      key: 'number',
+      label: 'Reference',
+      sortable: true,
+      render: (val) => <span className="font-mono font-bold text-xs text-foreground">{val}</span>,
+    },
+    {
+      key: 'customer',
+      label: 'Customer',
+      sortable: true,
+      render: (_, row) => <span className="font-sans font-medium text-sm">{row.customer.name}</span>,
+    },
+    {
+      key: 'plan',
+      label: 'Plan & Period',
+      render: (_, row) => (
+        <span className="font-sans text-xs text-muted-foreground">
+          <span className="text-foreground font-medium">{row.plan.name}</span>
+          <span className="font-mono text-[11px] ml-1.5 opacity-70 capitalize">({row.plan.billing_period})</span>
+        </span>
+      ),
+    },
+    {
+      key: 'start_date',
+      label: 'Start Date',
+      sortable: true,
+      render: (val) => <DateText date={val} className="font-mono text-xs text-muted-foreground" />,
+    },
+    {
+      key: 'status',
+      label: 'Status',
+      sortable: true,
+      render: (val) => <StatusBadge status={val} type="subscription" />,
+    },
+    {
+      key: 'total',
+      label: 'Total (INR)',
+      align: 'right',
+      sortable: true,
+      render: (val) => <MoneyText amount={val} className="text-right font-mono font-semibold text-xs" />,
+    },
+  ]
 
   return (
     <div className="space-y-8 max-w-7xl mx-auto">
@@ -82,7 +188,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      {/* KPI Cards: High contrast, flat, breathable */}
+      {/* KPI Cards */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {kpis.map((kpi) => {
           const Icon = kpi.icon
@@ -122,104 +228,66 @@ export default function DashboardPage() {
         })}
       </div>
 
-      {/* Demo DataTable: Clean industrial layout, monospace numbers */}
-      <Card className="p-2 border-border">
-        <CardHeader className="p-6 pb-4">
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <CardTitle className="font-sans text-lg font-bold uppercase tracking-tight">
-                  Recent Subscriptions
-                </CardTitle>
-                <Badge variant="secondary" className="text-[10px]">
-                  5 RECORDS
-                </Badge>
-              </div>
-              <CardDescription className="text-xs text-muted-foreground mt-1">
-                DataTable preview with server-styled columns, status chips, and monetary values.
-              </CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline">
-                FILTER
-              </Button>
-              <Button size="sm" variant="secondary">
-                EXPORT
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
+      {/* FilterBar Demo */}
+      <FilterBar
+        search={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Filter subscriptions..."
+        filters={[
+          {
+            key: 'status',
+            label: 'All Statuses',
+            value: statusFilter,
+            onChange: setStatusFilter,
+            options: [
+              { label: 'Draft', value: SUBSCRIPTION_STATUSES.DRAFT },
+              { label: 'Quotation', value: SUBSCRIPTION_STATUSES.QUOTATION },
+              { label: 'Confirmed', value: SUBSCRIPTION_STATUSES.CONFIRMED },
+              { label: 'Active', value: SUBSCRIPTION_STATUSES.ACTIVE },
+              { label: 'Closed', value: SUBSCRIPTION_STATUSES.CLOSED },
+            ],
+          },
+        ]}
+        onReset={() => {
+          setSearch('')
+          setStatusFilter('')
+        }}
+      />
 
-        <CardContent className="p-6 pt-2">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-b border-border hover:bg-transparent">
-                <TableHead className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                  Reference
-                </TableHead>
-                <TableHead className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                  Customer
-                </TableHead>
-                <TableHead className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                  Plan & Period
-                </TableHead>
-                <TableHead className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                  Start Date
-                </TableHead>
-                <TableHead className="font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                  Status
-                </TableHead>
-                <TableHead className="text-right font-mono text-xs uppercase tracking-wider text-muted-foreground">
-                  Total (INR)
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {demoRows.map((row) => (
-                <TableRow key={row.id} className="border-b border-border/60 hover:bg-muted/50">
-                  <TableCell className="font-mono font-bold text-xs text-foreground">
-                    {row.id}
-                  </TableCell>
-                  <TableCell className="font-sans font-medium text-sm">
-                    {row.customer}
-                  </TableCell>
-                  <TableCell className="font-sans text-xs text-muted-foreground">
-                    <span className="text-foreground font-medium">{row.plan}</span>
-                    <span className="font-mono text-[11px] ml-1.5 opacity-70">({row.period})</span>
-                  </TableCell>
-                  <TableCell className="font-mono text-xs text-muted-foreground">
-                    {row.date}
-                  </TableCell>
-                  <TableCell>
-                    {getStatusBadge(row.status)}
-                  </TableCell>
-                  <TableCell className="text-right font-mono font-semibold text-xs">
-                    {row.amount}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-
-          {/* Industrial Pagination footer */}
-          <div className="flex flex-col sm:flex-row items-center justify-between border-t border-border pt-4 text-xs text-muted-foreground mt-4 gap-3">
-            <div className="font-mono text-[11px]">
-              SHOWING <span className="text-foreground font-semibold">1</span> TO <span className="text-foreground font-semibold">5</span> OF <span className="text-foreground font-semibold">5</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <Button variant="outline" size="sm" disabled className="h-8 text-xs font-mono">
-                PREVIOUS
-              </Button>
-              <Button variant="default" size="sm" className="h-8 w-8 text-xs font-mono p-0">
-                1
-              </Button>
-              <Button variant="outline" size="sm" disabled className="h-8 text-xs font-mono">
-                NEXT
-              </Button>
-            </div>
+      {/* Reusable DataTable Demo with Sort Headers and Server Pagination */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <h2 className="font-sans text-lg font-bold uppercase tracking-tight text-foreground">
+              Recent Subscriptions
+            </h2>
+            <Badge variant="secondary" className="font-mono text-[10px]">
+              {filteredRows.length} RECORDS
+            </Badge>
           </div>
-        </CardContent>
-      </Card>
+          <span className="font-mono text-xs text-muted-foreground">
+            Server Pagination & Sort Header Demo
+          </span>
+        </div>
+
+        <DataTable
+          columns={columns}
+          data={filteredRows}
+          sort={sortField}
+          direction={sortDir}
+          onSort={handleSort}
+          page={page}
+          perPage={perPage}
+          onPageChange={setPage}
+          onPerPageChange={setPerPage}
+          meta={{
+            current_page: page,
+            last_page: 1,
+            per_page: perPage,
+            total: filteredRows.length,
+          }}
+        />
+      </div>
     </div>
   )
 }
