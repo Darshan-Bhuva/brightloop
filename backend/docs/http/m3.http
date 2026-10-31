@@ -1,0 +1,118 @@
+@baseUrl = http://localhost:8000/api
+@adminToken = paste-admin-access-token-here
+@staffToken = paste-staff-access-token-here
+
+### PLN-01 List plans (Admin / Staff)
+GET {{baseUrl}}/plans?billing_period=monthly&is_active=true&available=true&all=1
+Accept: application/json
+Authorization: Bearer {{staffToken}}
+
+### PLN-02 Create plan (Admin only)
+POST {{baseUrl}}/plans
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Quarterly Pro",
+  "price": 2499.00,
+  "billing_period": "monthly",
+  "min_quantity": 2,
+  "start_date": "2026-01-01",
+  "end_date": "2026-12-31",
+  "tax_id": 1,
+  "auto_close": false,
+  "closable": true,
+  "pausable": true,
+  "renewable": true,
+  "is_active": true
+}
+
+### PLN-03 Show plan (Admin / Staff)
+GET {{baseUrl}}/plans/1
+Accept: application/json
+Authorization: Bearer {{staffToken}}
+
+### PLN-04 Update plan (Admin only)
+PUT {{baseUrl}}/plans/1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Monthly Starter Updated",
+  "price": 1099.00,
+  "billing_period": "monthly",
+  "min_quantity": 1,
+  "start_date": "2026-08-02",
+  "end_date": null,
+  "tax_id": 1,
+  "auto_close": false,
+  "closable": true,
+  "pausable": true,
+  "renewable": true,
+  "is_active": true
+}
+
+### PLN-05 Delete plan (Admin only)
+DELETE {{baseUrl}}/plans/1
+Accept: application/json
+Authorization: Bearer {{adminToken}}
+
+
+### DSC-01 List discounts (Admin / Staff)
+GET {{baseUrl}}/discounts?state=active&type=percentage&all=1
+Accept: application/json
+Authorization: Bearer {{staffToken}}
+
+### DSC-02 Create discount (Admin only)
+POST {{baseUrl}}/discounts
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Spring Promo 15%",
+  "code": "SPRING15",
+  "type": "percentage",
+  "value": 15.00,
+  "applies_to": "products",
+  "product_ids": [1],
+  "min_purchase": 1000.00,
+  "min_quantity": 2,
+  "start_date": "2026-03-01",
+  "end_date": "2026-06-30",
+  "usage_limit": 100,
+  "is_active": true
+}
+
+### DSC-03 Show discount (Admin / Staff)
+GET {{baseUrl}}/discounts/1
+Accept: application/json
+Authorization: Bearer {{staffToken}}
+
+### DSC-04 Update discount (Admin only)
+PUT {{baseUrl}}/discounts/1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{adminToken}}
+
+{
+  "name": "Volume 10% Updated",
+  "code": "VOL10",
+  "type": "percentage",
+  "value": 12.00,
+  "applies_to": "products",
+  "product_ids": [1],
+  "min_purchase": 1500.00,
+  "min_quantity": 5,
+  "start_date": "2026-10-01",
+  "end_date": "2027-04-29",
+  "usage_limit": 50,
+  "is_active": true
+}
+
+### DSC-05 Delete discount (Admin only)
+DELETE {{baseUrl}}/discounts/1
+Accept: application/json
+Authorization: Bearer {{adminToken}}
