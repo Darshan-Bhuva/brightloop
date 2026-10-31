@@ -147,7 +147,7 @@ export async function sendQuotation(id) {
 }
 
 /**
- * SUB-07 Confirm subscription (Admin, Staff) - quotation -> confirmed
+ * SUB-07 Confirm subscription (Admin, Staff, Customer own) - quotation -> confirmed
  * @param {number|string} id
  * @returns {Promise<{ success: boolean, message: string, data: object }>}
  */
@@ -317,3 +317,6 @@ export async function detachDiscount(id, discountId) {
     () => mockDetachDiscount(id, discountId)
   )
 }
+
+// Alias for SUB-07 confirm
+export const confirm = confirmSubscription

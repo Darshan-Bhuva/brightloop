@@ -12,6 +12,7 @@ import {
   Layers,
   AlertTriangle,
   Check,
+  FileText,
 } from 'lucide-react'
 import {
   getSubscription,
@@ -20,9 +21,13 @@ import {
   closeSubscription,
   renewSubscription,
 } from '@/api/subscriptions'
+import { useConfirmSubscription } from '@/hooks/useSubscriptions'
 import { handleApiError } from '@/lib/errors'
 import { formatMoney, formatDate, formatDateTime } from '@/lib/format'
 import { StatusBadge } from '@/components/common/StatusBadge'
+import { MoneyText } from '@/components/common/MoneyText'
+import { DateText } from '@/components/common/DateText'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
@@ -56,6 +61,7 @@ export default function PortalSubscriptionDetail() {
   const [isActionLoading, setIsActionLoading] = useState(false)
 
   // Dialogs for customer self-serve actions
+  const [isAcceptDialogOpen, setIsAcceptDialogOpen] = useState(false)
   const [isCloseDialogOpen, setIsCloseDialogOpen] = useState(false)
   const [closeReason, setCloseReason] = useState('')
   const [isRenewDialogOpen, setIsRenewDialogOpen] = useState(false)
@@ -77,7 +83,31 @@ export default function PortalSubscriptionDetail() {
     fetchSubscription()
   }, [fetchSubscription])
 
-  // Customer permitted actions: pause, resume, close, renew
+  // Customer acceptance mutation hook
+  const confirmMutation = useConfirmSubscription({
+    onSuccess: (res) => {
+      setSubscription(res.data)
+      setIsAcceptDialogOpen(false)
+      toast.success('Quotation accepted')
+      fetchSubscription()
+    },
+    onError: (err) => {
+      handleApiError(err)
+      setIsAcceptDialogOpen(false)
+      fetchSubscription()
+    },
+  })
+
+  // Customer permitted actions: confirm, pause, resume, close, renew
+  const handleAcceptQuotation = async () => {
+    setIsActionLoading(true)
+    try {
+      await confirmMutation.mutateAsync(id)
+    } finally {
+      setIsActionLoading(false)
+    }
+  }
+
   const handlePause = async () => {
     setIsActionLoading(true)
     try {
@@ -209,6 +239,19 @@ export default function PortalSubscriptionDetail() {
 
           {/* Customer Self-Serve Actions (strictly from allowed_actions) */}
           <div className="flex items-center flex-wrap gap-2">
+            {allowed.includes('confirm') && (
+              <Button
+                variant="default"
+                size="sm"
+                onClick={() => setIsAcceptDialogOpen(true)}
+                disabled={isActionLoading}
+                className="rounded-sm bg-primary text-white hover:bg-primary/90 h-8 text-xs font-semibold shadow-sm gap-1.5"
+              >
+                <Check className="h-3.5 w-3.5" />
+                Accept Quotation
+              </Button>
+            )}
+
             {allowed.includes('pause') && (
               <Button
                 variant="outline"
@@ -310,11 +353,50 @@ export default function PortalSubscriptionDetail() {
         </div>
       </div>
 
+      {/* Quotation Notice Banner */}
+      {(subscription.status === 'quotation' || allowed.includes('confirm')) && (
+        <Card className="rounded-md border-amber-300 bg-amber-50/50 shadow-none">
+          <CardContent className="p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+            <div className="flex items-start gap-3">
+              <FileText className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+              <div className="space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h3 className="text-sm font-semibold text-black">
+                    Official Quotation Proposal
+                  </h3>
+                  {subscription.quotation_valid_until && (
+                    <Badge variant="outline" className="border-amber-300 bg-amber-100 text-amber-900 font-mono text-[11px]">
+                      Valid until <DateText date={subscription.quotation_valid_until} format="dd MMM yyyy" className="font-semibold ml-1" />
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-zinc-600">
+                  Please review the proposed plan fee and line items below. Quotation rate is{' '}
+                  <MoneyText amount={subscription.total} className="font-bold text-black" /> per{' '}
+                  <span className="font-medium text-black">{subscription.plan?.billing_period}</span>.
+                </p>
+              </div>
+            </div>
+            {allowed.includes('confirm') && (
+              <Button
+                type="button"
+                onClick={() => setIsAcceptDialogOpen(true)}
+                disabled={isActionLoading}
+                className="rounded-sm bg-primary text-white hover:bg-primary/90 text-xs font-semibold px-4 h-9 shadow-sm shrink-0 gap-1.5"
+              >
+                <Check className="h-4 w-4" />
+                Accept Quotation
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Closed Notice Banner */}
       {subscription.status === 'closed' && (
         <div className="p-3.5 rounded-sm border border-zinc-300 bg-zinc-100 flex items-center justify-between text-xs">
           <div className="flex items-center gap-2">
-            <XCircle className="h-4 w-4 text-zinc-600 shrink-0" />
+            <XCircle className="h-4 w-4 text-zinc-600 shrink-0 mt-0.5" />
             <span className="font-semibold text-black">Subscription Closed:</span>
             <span className="text-zinc-600">
               Closed on {formatDateTime(subscription.closed_at)}
@@ -346,7 +428,7 @@ export default function PortalSubscriptionDetail() {
             </div>
             <div className="text-zinc-600 flex items-center justify-between">
               <span>Recurring Price:</span>
-              <span className="font-mono font-semibold text-black">{formatMoney(subscription.plan?.price)}</span>
+              <MoneyText amount={subscription.plan?.price} className="font-semibold text-black" />
             </div>
           </CardContent>
         </Card>
@@ -362,17 +444,25 @@ export default function PortalSubscriptionDetail() {
           <CardContent className="p-4 space-y-2 text-xs">
             <div className="flex items-center justify-between text-zinc-600">
               <span>Start Date:</span>
-              <span className="font-mono text-black">{formatDate(subscription.start_date)}</span>
+              <DateText date={subscription.start_date} className="font-mono text-black" />
             </div>
             <div className="flex items-center justify-between text-zinc-600">
               <span>Expiry Date:</span>
-              <span className="font-mono text-black">{formatDate(subscription.expiry_date)}</span>
+              <DateText date={subscription.expiry_date} className="font-mono text-black" />
             </div>
+            {subscription.quotation_valid_until && (
+              <div className="flex items-center justify-between text-zinc-600 pt-1 border-t border-border">
+                <span>Quotation Valid Until:</span>
+                <span className="font-mono text-black font-semibold">
+                  Valid until <DateText date={subscription.quotation_valid_until} format="dd MMM yyyy" className="font-semibold" />
+                </span>
+              </div>
+            )}
             {subscription.status === 'active' && (
               <div className="flex items-center justify-between text-zinc-600 pt-1 border-t border-border">
                 <span>Next Billing Cycle:</span>
                 <span className="font-mono font-semibold text-black">
-                  {subscription.next_invoice_date ? formatDate(subscription.next_invoice_date) : '-'}
+                  {subscription.next_invoice_date ? <DateText date={subscription.next_invoice_date} /> : '-'}
                 </span>
               </div>
             )}
@@ -424,10 +514,10 @@ export default function PortalSubscriptionDetail() {
                     {line.quantity}
                   </TableCell>
                   <TableCell className="text-xs font-mono text-zinc-700 text-right">
-                    {formatMoney(line.unit_price)}
+                    <MoneyText amount={line.unit_price} className="text-xs text-zinc-700" />
                   </TableCell>
                   <TableCell className="text-xs font-mono font-semibold text-black text-right">
-                    {formatMoney(line.total)}
+                    <MoneyText amount={line.total} className="text-xs font-semibold text-black" />
                   </TableCell>
                 </TableRow>
               ))}
@@ -439,20 +529,33 @@ export default function PortalSubscriptionDetail() {
             <div className="w-72 space-y-2 text-xs">
               <div className="flex items-center justify-between text-zinc-600">
                 <span>Subtotal</span>
-                <span className="font-mono font-medium text-black">{formatMoney(subscription.subtotal)}</span>
+                <MoneyText amount={subscription.subtotal} className="font-mono font-medium text-black" />
               </div>
               <div className="flex items-center justify-between text-zinc-600">
                 <span>Tax Total</span>
-                <span className="font-mono font-medium text-black">{formatMoney(subscription.tax_total)}</span>
+                <MoneyText amount={subscription.tax_total} className="font-mono font-medium text-black" />
               </div>
               <div className="pt-2 border-t border-border flex items-center justify-between font-semibold text-black">
                 <span>Total Periodic Rate</span>
-                <span className="font-mono text-lg text-primary">{formatMoney(subscription.total)}</span>
+                <MoneyText amount={subscription.total} className="text-lg text-primary font-bold" />
               </div>
             </div>
           </div>
         </CardContent>
       </Card>
+
+      {/* Accept Quotation Confirm Dialog */}
+      <ConfirmDialog
+        open={isAcceptDialogOpen}
+        onOpenChange={setIsAcceptDialogOpen}
+        title="Accept Quotation"
+        description={`Accept this quotation for ${formatMoney(subscription.total)} per ${subscription.plan?.billing_period || 'period'}?`}
+        confirmText="Accept Quotation"
+        cancelText="Cancel"
+        variant="primary"
+        loading={isActionLoading}
+        onConfirm={handleAcceptQuotation}
+      />
 
       {/* Close Subscription Dialog */}
       <Dialog open={isCloseDialogOpen} onOpenChange={setIsCloseDialogOpen}>
