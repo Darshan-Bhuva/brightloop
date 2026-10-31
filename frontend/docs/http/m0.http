@@ -1,29 +1,143 @@
 @baseUrl = http://localhost:8000/api
 @token = paste-access-token-here
 
-### Module M6: Payments Endpoints
+### ============================================================================
+### Module M8: Hardening, Performance Benchmarks & Catalog Endpoints
+### ============================================================================
 
-### PAY-01 List payments (Admin, Staff all; Customer own)
-GET {{baseUrl}}/payments?method=upi&sort=payment_date&direction=desc&page=1&per_page=15
+### 1. Performance Benchmark: High-Volume Subscriptions Query (< 2s on 3,000 items)
+GET {{baseUrl}}/subscriptions?status=active&per_page=15&page=1
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### PAY-02 Record payment against confirmed invoice (Admin, Staff)
-POST {{baseUrl}}/payments
+### 2. Performance Benchmark: High-Volume Invoices Query (< 2s on 8,000 items)
+GET {{baseUrl}}/invoices?status=confirmed&per_page=15&page=1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### 3. Performance Benchmark: Reports & Summary KPI Query (< 2s calculation)
+GET {{baseUrl}}/reports/summary?date_from=2026-01-01&date_to=2026-12-31
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### ============================================================================
+### Catalog: Subscription Plans (PLN-01 .. PLN-05)
+### ============================================================================
+
+### PLN-01 List Plans (Admin, Staff)
+GET {{baseUrl}}/plans?billing_period=monthly&is_active=1&all=1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### PLN-02 Create Plan (Admin only)
+POST {{baseUrl}}/plans
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "invoice_id": 2,
-  "method": "upi",
-  "amount": "500.00",
-  "payment_date": "2026-10-31",
-  "reference": "UPI-SETTLE-101",
-  "note": "Partial settlement for confirmed invoice"
+  "name": "Enterprise Cloud Monthly",
+  "price": 1499.00,
+  "billing_period": "monthly",
+  "min_quantity": 5,
+  "start_date": "2026-01-01",
+  "end_date": null,
+  "tax_id": 3,
+  "auto_close": false,
+  "closable": true,
+  "pausable": true,
+  "renewable": true,
+  "is_active": true
 }
 
-### PAY-03 Delete payment and reverse invoice balances (Admin only)
-DELETE {{baseUrl}}/payments/1
+### PLN-03 Get Single Plan (Admin, Staff)
+GET {{baseUrl}}/plans/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### PLN-04 Update Plan (Admin only)
+PUT {{baseUrl}}/plans/1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Enterprise Cloud Monthly - Updated",
+  "price": 1599.00,
+  "billing_period": "monthly",
+  "min_quantity": 5,
+  "start_date": "2026-01-01",
+  "end_date": null,
+  "tax_id": 3,
+  "auto_close": false,
+  "closable": true,
+  "pausable": true,
+  "renewable": true,
+  "is_active": true
+}
+
+### PLN-05 Delete Plan (Admin only, 409 if active subscription exists)
+DELETE {{baseUrl}}/plans/999
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### ============================================================================
+### Catalog: Promotional Discounts (DSC-01 .. DSC-05)
+### ============================================================================
+
+### DSC-01 List Discounts (Admin, Staff)
+GET {{baseUrl}}/discounts?state=active&type=percentage&all=1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### DSC-02 Create Discount (Admin only)
+POST {{baseUrl}}/discounts
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Demo Loyalty 15% Off",
+  "code": "LOYALTY15",
+  "type": "percentage",
+  "value": 15.00,
+  "applies_to": "subscription",
+  "product_ids": [],
+  "min_purchase": 500.00,
+  "min_quantity": null,
+  "start_date": "2026-01-01",
+  "end_date": "2027-12-31",
+  "usage_limit": 100,
+  "is_active": true
+}
+
+### DSC-03 Get Single Discount (Admin, Staff)
+GET {{baseUrl}}/discounts/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### DSC-04 Update Discount (Admin only, usage_limit >= used_count)
+PUT {{baseUrl}}/discounts/1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Demo Loyalty 15% Off - Extended",
+  "code": "LOYALTY15",
+  "type": "percentage",
+  "value": 15.00,
+  "applies_to": "subscription",
+  "product_ids": [],
+  "min_purchase": 500.00,
+  "min_quantity": null,
+  "start_date": "2026-01-01",
+  "end_date": "2028-12-31",
+  "usage_limit": 200,
+  "is_active": true
+}
+
+### DSC-05 Delete Discount (Admin only)
+DELETE {{baseUrl}}/discounts/999
 Accept: application/json
 Authorization: Bearer {{token}}
