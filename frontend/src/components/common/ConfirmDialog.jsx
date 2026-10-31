@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 
 /**
  * ConfirmDialog prompts the user to confirm destructive or critical actions.
- * Built on Radix Dialog with 7Span industrial design tokens and loading state.
+ * Built on Radix Dialog with Brightloop industrial design tokens and loading state.
  *
  * @param {object} props
  * @param {boolean} props.open

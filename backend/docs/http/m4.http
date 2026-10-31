@@ -1,87 +1,76 @@
 @baseUrl = http://localhost:8000/api
 @token = paste-access-token-here
-# Get a token from AUTH-02 (POST /auth/login) and paste it into @token.
+# Get a token from AUTH-02 and paste it into @token.
 # Seeded logins: admin@brightloop.test / Admin@12345, staff@brightloop.test / Staff@12345, customer@brightloop.test / Customer@12345
-# Ids follow a fresh `migrate:fresh --seed`: plan 1 = Monthly Starter, products 1 = Business Suite (variant 1 = Brand: Odoo),
-# 2 = CRM Seat, 3 = Extra Storage 100GB, customer 2 = Acme Corp, payment term 2 = Net 15, template 1 = Standard SMB Offer,
-# discount 2 = Loyalty 500 Off. Subscriptions: 7 draft, 9 quotation, 10 confirmed, 1 active (Monthly Starter). Replace as needed.
+# Ids below (1, 2) are placeholders; replace them with real ids from the list endpoints.
 
-### TPL-01 List quotation templates (A,S) - add all=1 for dropdown mode
-GET {{baseUrl}}/quotation-templates?search=SMB&page=1&per_page=15
+### TPL-01 List quotation templates (Admin, Staff)
+GET {{baseUrl}}/quotation-templates?all=1
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### TPL-02 Create quotation template (A,S)
+### TPL-02 Create quotation template (Admin, Staff)
 POST {{baseUrl}}/quotation-templates
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "name": "Business Suite Offer",
-  "validity_days": 21,
+  "name": "Standard SMB Offer",
+  "validity_days": 14,
   "plan_id": 1,
-  "notes": "Suite with Odoo branding and two CRM seats",
+  "notes": "Standard SMB onboarding offer",
   "lines": [
-    { "product_id": 1, "variant_id": 1, "quantity": 1 },
-    { "product_id": 2, "variant_id": null, "quantity": 2 }
+    {
+      "product_id": 2,
+      "variant_id": null,
+      "quantity": 2
+    },
+    {
+      "product_id": 3,
+      "variant_id": null,
+      "quantity": 1
+    }
   ]
 }
 
-### TPL-03 Show quotation template (A,S)
+### TPL-03 Show quotation template (Admin, Staff)
 GET {{baseUrl}}/quotation-templates/1
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### TPL-04 Update quotation template, lines replaced (A,S)
-PUT {{baseUrl}}/quotation-templates/2
+### TPL-04 Update quotation template (Admin, Staff)
+PUT {{baseUrl}}/quotation-templates/1
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "name": "Business Suite Offer (revised)",
-  "validity_days": 30,
+  "name": "Updated Standard SMB Offer",
+  "validity_days": 21,
   "plan_id": 1,
-  "notes": null,
+  "notes": "Updated SMB onboarding package",
   "lines": [
-    { "product_id": 1, "variant_id": 1, "quantity": 1 },
-    { "product_id": 3, "quantity": 1 }
+    {
+      "product_id": 2,
+      "variant_id": null,
+      "quantity": 3
+    }
   ]
 }
 
-### TPL-05 Delete quotation template, soft (A,S)
-DELETE {{baseUrl}}/quotation-templates/2
+### TPL-05 Delete quotation template (Admin, Staff)
+DELETE {{baseUrl}}/quotation-templates/1
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### SUB-01 List subscriptions (A,S all; C own)
-GET {{baseUrl}}/subscriptions?status=active&is_paused=false&search=Acme&sort=created_at&direction=desc&page=1&per_page=15
+### SUB-01 List subscriptions (Admin, Staff all; Customer own)
+GET {{baseUrl}}/subscriptions?status=active&page=1&per_page=15
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### SUB-02 Create subscription (A,S) - from template: plan and lines are copied when absent
+### SUB-02 Create subscription (Admin, Staff)
 POST {{baseUrl}}/subscriptions
-Accept: application/json
-Content-Type: application/json
-Authorization: Bearer {{token}}
-
-{
-  "customer_id": 2,
-  "quotation_template_id": 1,
-  "payment_term_id": 2,
-  "start_date": "2026-11-01",
-  "expiry_date": "2027-10-31",
-  "notes": "Created from Standard SMB Offer"
-}
-
-### SUB-03 Show subscription (A,S; C own)
-GET {{baseUrl}}/subscriptions/7
-Accept: application/json
-Authorization: Bearer {{token}}
-
-### SUB-04 Update subscription, draft|quotation only (A,S)
-PUT {{baseUrl}}/subscriptions/7
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer {{token}}
@@ -89,69 +78,103 @@ Authorization: Bearer {{token}}
 {
   "customer_id": 1,
   "plan_id": 1,
-  "quotation_template_id": null,
-  "payment_term_id": 2,
+  "payment_term_id": 1,
   "start_date": "2026-11-01",
   "expiry_date": "2027-10-31",
-  "notes": "Three seats plus storage",
+  "notes": "Acme annual contract",
   "lines": [
-    { "product_id": 2, "variant_id": null, "quantity": 3 },
-    { "product_id": 3, "variant_id": null, "quantity": 1 }
+    {
+      "product_id": 2,
+      "variant_id": null,
+      "quantity": 2
+    },
+    {
+      "product_id": 3,
+      "variant_id": null,
+      "quantity": 1
+    }
   ]
 }
 
-### SUB-05 Delete subscription, draft only (A,S)
-DELETE {{baseUrl}}/subscriptions/8
+### SUB-03 Show subscription (Admin, Staff; Customer own)
+GET {{baseUrl}}/subscriptions/1
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### SUB-06 Send quotation: draft -> quotation (A,S)
-POST {{baseUrl}}/subscriptions/7/send-quotation
+### SUB-04 Update subscription (Admin, Staff - only draft or quotation)
+PUT {{baseUrl}}/subscriptions/1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": 1,
+  "plan_id": 1,
+  "payment_term_id": 1,
+  "start_date": "2026-11-01",
+  "expiry_date": "2027-10-31",
+  "notes": "Acme updated draft",
+  "lines": [
+    {
+      "product_id": 2,
+      "variant_id": null,
+      "quantity": 3
+    }
+  ]
+}
+
+### SUB-05 Delete subscription (Admin, Staff - only draft)
+DELETE {{baseUrl}}/subscriptions/1
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### SUB-07 Confirm: quotation -> confirmed (A,S)
-POST {{baseUrl}}/subscriptions/9/confirm
+### SUB-06 Send quotation (Admin, Staff - draft -> quotation)
+POST {{baseUrl}}/subscriptions/1/send-quotation
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### SUB-08 Activate: confirmed -> active (A,S)
-POST {{baseUrl}}/subscriptions/10/activate
+### SUB-07 Confirm subscription (Admin, Staff - quotation -> confirmed)
+POST {{baseUrl}}/subscriptions/1/confirm
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### SUB-09 Pause (A,S,C own)
+### SUB-08 Activate subscription (Admin, Staff - confirmed -> active)
+POST {{baseUrl}}/subscriptions/1/activate
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### SUB-09 Pause subscription (Admin, Staff, Customer own)
 POST {{baseUrl}}/subscriptions/1/pause
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### SUB-10 Resume (A,S,C own)
+### SUB-10 Resume subscription (Admin, Staff, Customer own)
 POST {{baseUrl}}/subscriptions/1/resume
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### SUB-11 Close (A,S,C own)
+### SUB-11 Close subscription (Admin, Staff, Customer own)
 POST {{baseUrl}}/subscriptions/1/close
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "reason": "Customer moved to another provider"
+  "reason": "Customer requested cancellation"
 }
 
-### SUB-12 Renew (A,S,C own) - new_expiry_date must be after the current expiry_date
-POST {{baseUrl}}/subscriptions/2/renew
+### SUB-12 Renew subscription (Admin, Staff, Customer own)
+POST {{baseUrl}}/subscriptions/1/renew
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "new_expiry_date": "2028-12-31"
+  "new_expiry_date": "2028-10-31"
 }
 
-### SUB-13 Attach discount (A,S) - applies_to=subscription and state=active
-POST {{baseUrl}}/subscriptions/2/discounts
+### SUB-13 Attach discount (Admin, Staff)
+POST {{baseUrl}}/subscriptions/1/discounts
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer {{token}}
@@ -160,7 +183,8 @@ Authorization: Bearer {{token}}
   "discount_id": 2
 }
 
-### SUB-14 Detach discount (A,S)
-DELETE {{baseUrl}}/subscriptions/2/discounts/2
+### SUB-14 Detach discount (Admin, Staff)
+DELETE {{baseUrl}}/subscriptions/1/discounts/2
 Accept: application/json
 Authorization: Bearer {{token}}
+
