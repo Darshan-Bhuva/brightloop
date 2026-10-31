@@ -102,3 +102,4 @@ export async function getDiscounts(params = {}) {
     () => mockSuccessEnvelope(mockDiscounts)
   )
 }
+

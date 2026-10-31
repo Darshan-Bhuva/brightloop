@@ -114,3 +114,4 @@ export async function deleteQuotationTemplate(id) {
     () => mockDeleteQuotationTemplate(id)
   )
 }
+

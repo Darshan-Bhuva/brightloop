@@ -148,3 +148,4 @@ export function mockDeleteQuotationTemplate(id) {
   mockQuotationTemplates = mockQuotationTemplates.filter((t) => t.id !== Number(id))
   return mockSuccessEnvelope(null, null, 'Quotation template deleted successfully')
 }
+

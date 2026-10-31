@@ -187,3 +187,4 @@ Authorization: Bearer {{token}}
 DELETE {{baseUrl}}/subscriptions/1/discounts/2
 Accept: application/json
 Authorization: Bearer {{token}}
+

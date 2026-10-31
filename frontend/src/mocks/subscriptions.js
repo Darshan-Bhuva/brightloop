@@ -832,3 +832,4 @@ export function mockDetachDiscount(id, discountId) {
   sub.allowed_actions = computeAllowedActions(sub)
   return mockSuccessEnvelope(sub, null, 'Discount detached successfully')
 }
+
