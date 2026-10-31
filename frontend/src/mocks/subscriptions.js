@@ -24,6 +24,11 @@ export function computeAllowedActions(sub, role = 'admin') {
     if (['draft', 'quotation', 'confirmed', 'active'].includes(sub.status)) {
       actions.push('add_discount')
     }
+  } else {
+    // Contract change: SUB-07 confirm allowed for customer (own) when status = quotation
+    if (sub.status === 'quotation') {
+      actions.push('confirm')
+    }
   }
 
   // Active state actions
@@ -313,7 +318,7 @@ export let mockSubscriptions = [
     number: 'SUB-000005',
     status: 'quotation',
     is_paused: false,
-    customer: { id: 5, name: 'BluePeak Solutions', email: 'contact@bluepeak.test', phone: '+91 98765 00005', company_name: 'BluePeak IT' },
+    customer: { id: 1, name: 'Acme Corp', email: 'billing@acme.test', phone: '+91 98765 00001', company_name: 'Acme Corporation' },
     plan: { id: 3, name: 'Weekly Trial', billing_period: 'weekly', price: '199.00', closable: true, pausable: false, renewable: false, auto_close: true },
     payment_term: { id: 1, name: 'Immediate', due_days: 0 },
     quotation_template_id: null,
@@ -364,7 +369,7 @@ export let mockSubscriptions = [
     total: '1178.82',
     closed_at: null,
     close_reason: null,
-    allowed_actions: ['edit', 'confirm', 'add_discount'],
+    allowed_actions: ['confirm'],
     created_at: '2026-10-26T08:45:00Z',
   },
   // 6. Confirmed State
@@ -541,7 +546,14 @@ export function mockGetSubscription(id, role = 'admin') {
   // Compute allowed actions dynamically
   const updatedSub = {
     ...sub,
-    allowed_actions: computeAllowedActions(sub, role),
+    allowed_actions: computeAllowedActions(
+      sub,
+      typeof window !== 'undefined' &&
+        ((localStorage.getItem('bl_token') || '').includes('customer') ||
+          window.location.pathname.startsWith('/portal'))
+        ? 'customer'
+        : role
+    ),
   }
   return mockSuccessEnvelope(updatedSub)
 }
@@ -701,7 +713,14 @@ export function mockSendQuotation(id) {
   today.setDate(today.getDate() + 30)
   sub.status = 'quotation'
   sub.quotation_valid_until = today.toISOString().split('T')[0]
-  sub.allowed_actions = computeAllowedActions(sub)
+  sub.allowed_actions = computeAllowedActions(
+    sub,
+    typeof window !== 'undefined' &&
+      ((localStorage.getItem('bl_token') || '').includes('customer') ||
+        window.location.pathname.startsWith('/portal'))
+      ? 'customer'
+      : 'admin'
+  )
   return mockSuccessEnvelope(sub, null, 'Quotation sent successfully')
 }
 
@@ -718,7 +737,14 @@ export function mockConfirmSubscription(id) {
   }
 
   sub.status = 'confirmed'
-  sub.allowed_actions = computeAllowedActions(sub)
+  sub.allowed_actions = computeAllowedActions(
+    sub,
+    typeof window !== 'undefined' &&
+      ((localStorage.getItem('bl_token') || '').includes('customer') ||
+        window.location.pathname.startsWith('/portal'))
+      ? 'customer'
+      : 'admin'
+  )
   return mockSuccessEnvelope(sub, null, 'Subscription confirmed successfully')
 }
 
@@ -731,7 +757,14 @@ export function mockActivateSubscription(id) {
 
   sub.status = 'active'
   sub.next_invoice_date = sub.start_date
-  sub.allowed_actions = computeAllowedActions(sub)
+  sub.allowed_actions = computeAllowedActions(
+    sub,
+    typeof window !== 'undefined' &&
+      ((localStorage.getItem('bl_token') || '').includes('customer') ||
+        window.location.pathname.startsWith('/portal'))
+      ? 'customer'
+      : 'admin'
+  )
   return mockSuccessEnvelope(sub, null, 'Subscription activated successfully')
 }
 
@@ -747,7 +780,14 @@ export function mockPauseSubscription(id) {
 
   sub.is_paused = true
   sub.paused_at = new Date().toISOString()
-  sub.allowed_actions = computeAllowedActions(sub)
+  sub.allowed_actions = computeAllowedActions(
+    sub,
+    typeof window !== 'undefined' &&
+      ((localStorage.getItem('bl_token') || '').includes('customer') ||
+        window.location.pathname.startsWith('/portal'))
+      ? 'customer'
+      : 'admin'
+  )
   return mockSuccessEnvelope(sub, null, 'Subscription paused successfully')
 }
 
@@ -764,7 +804,14 @@ export function mockResumeSubscription(id) {
   if (sub.next_invoice_date && sub.next_invoice_date < today) {
     sub.next_invoice_date = today
   }
-  sub.allowed_actions = computeAllowedActions(sub)
+  sub.allowed_actions = computeAllowedActions(
+    sub,
+    typeof window !== 'undefined' &&
+      ((localStorage.getItem('bl_token') || '').includes('customer') ||
+        window.location.pathname.startsWith('/portal'))
+      ? 'customer'
+      : 'admin'
+  )
   return mockSuccessEnvelope(sub, null, 'Subscription resumed successfully')
 }
 
@@ -782,7 +829,14 @@ export function mockCloseSubscription(id, data = {}) {
   sub.closed_at = new Date().toISOString()
   sub.close_reason = data.reason || 'Closed per request'
   sub.next_invoice_date = null
-  sub.allowed_actions = computeAllowedActions(sub)
+  sub.allowed_actions = computeAllowedActions(
+    sub,
+    typeof window !== 'undefined' &&
+      ((localStorage.getItem('bl_token') || '').includes('customer') ||
+        window.location.pathname.startsWith('/portal'))
+      ? 'customer'
+      : 'admin'
+  )
   return mockSuccessEnvelope(sub, null, 'Subscription closed successfully')
 }
 
@@ -800,7 +854,14 @@ export function mockRenewSubscription(id, data) {
   }
 
   sub.expiry_date = data.new_expiry_date
-  sub.allowed_actions = computeAllowedActions(sub)
+  sub.allowed_actions = computeAllowedActions(
+    sub,
+    typeof window !== 'undefined' &&
+      ((localStorage.getItem('bl_token') || '').includes('customer') ||
+        window.location.pathname.startsWith('/portal'))
+      ? 'customer'
+      : 'admin'
+  )
   return mockSuccessEnvelope(sub, null, 'Subscription renewed successfully')
 }
 
@@ -820,7 +881,14 @@ export function mockAttachDiscount(id, data) {
   if (!sub.discounts.some((d) => d.id === discountId)) {
     sub.discounts.push(discount)
   }
-  sub.allowed_actions = computeAllowedActions(sub)
+  sub.allowed_actions = computeAllowedActions(
+    sub,
+    typeof window !== 'undefined' &&
+      ((localStorage.getItem('bl_token') || '').includes('customer') ||
+        window.location.pathname.startsWith('/portal'))
+      ? 'customer'
+      : 'admin'
+  )
   return mockSuccessEnvelope(sub, null, 'Discount attached successfully')
 }
 
@@ -829,7 +897,14 @@ export function mockDetachDiscount(id, discountId) {
   if (!sub) throw { response: { status: 404, data: { success: false, message: 'Subscription not found' } } }
 
   sub.discounts = sub.discounts.filter((d) => d.id !== Number(discountId))
-  sub.allowed_actions = computeAllowedActions(sub)
+  sub.allowed_actions = computeAllowedActions(
+    sub,
+    typeof window !== 'undefined' &&
+      ((localStorage.getItem('bl_token') || '').includes('customer') ||
+        window.location.pathname.startsWith('/portal'))
+      ? 'customer'
+      : 'admin'
+  )
   return mockSuccessEnvelope(sub, null, 'Discount detached successfully')
 }
 

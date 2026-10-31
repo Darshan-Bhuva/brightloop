@@ -76,3 +76,21 @@ export function handleApiError(error, setError) {
   const message = data?.message || error?.message || 'An unexpected error occurred'
   toast.error(message, { duration: 5000 })
 }
+
+/**
+ * Extract human-readable error message from an API error
+ * @param {Error|object} error
+ * @param {string} [fallback='An unexpected error occurred']
+ * @returns {string}
+ */
+export function getErrorMessage(error, fallback = 'An unexpected error occurred') {
+  const data = error?.response?.data
+  if (data?.errors) {
+    const firstKey = Object.keys(data.errors)[0]
+    if (firstKey) {
+      const messages = data.errors[firstKey]
+      return Array.isArray(messages) ? messages[0] : messages
+    }
+  }
+  return data?.message || error?.message || fallback
+}

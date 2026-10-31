@@ -9,17 +9,10 @@ export default function Logo({
   size = 'md',
 }) {
   const iconSizes = {
-    sm: 'h-7 w-7',
+    sm: 'h-6 w-6',
     default: 'h-8 w-8',
     md: 'h-9 w-9',
-    lg: 'h-12 w-12',
-  }
-
-  const svgSizes = {
-    sm: 'h-4 w-4',
-    default: 'h-4 w-4',
-    md: 'h-5 w-5',
-    lg: 'h-6 w-6',
+    lg: 'h-11 w-11',
   }
 
   const textSizes = {
@@ -31,26 +24,30 @@ export default function Logo({
 
   return (
     <div className={cn('flex items-center gap-3', className)}>
-      {/* Brightloop Geometric Infinity Mark */}
+      {/* BrightLoop Dynamic Turbine Symbol */}
       <div
         className={cn(
-          'flex items-center justify-center rounded-sm bg-primary text-primary-foreground shrink-0 shadow-none',
+          'flex items-center justify-center shrink-0',
           iconSizes[size] || iconSizes.default,
           iconClassName
         )}
       >
         <svg
-          viewBox="0 0 32 32"
-          fill="none"
           xmlns="http://www.w3.org/2000/svg"
-          className={svgSizes[size] || svgSizes.default}
+          viewBox="0 0 256 256"
+          className="h-full w-full"
+          role="img"
+          aria-labelledby="title-v1"
         >
+          <title id="title-v1">BrightLoop Dynamic Turbine Symbol</title>
           <path
-            d="M9.5 11C6.46 11 4 13.46 4 16.5C4 19.54 6.46 22 9.5 22C13.2 22 15.5 18 16 16.5C16.5 15 18.8 11 22.5 11C25.54 11 28 13.46 28 16.5C28 19.54 25.54 22 22.5 22C18.8 22 16.5 18 16 16.5"
-            stroke="currentColor"
-            strokeWidth="3.2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+            fill="#F81927"
+            d="M 46 128 C 46 78 86 38 136 38 C 172 38 204 56 226 84 L 198 112 C 182 92 160 78 136 78 C 108 78 86 100 86 128 C 86 148 98 164 116 172 L 102 208 C 68 194 46 164 46 128 Z"
+          />
+          <path
+            className="fill-black dark:fill-white"
+            fill="#000000"
+            d="M 210 128 C 210 178 170 218 120 218 C 84 218 52 200 30 172 L 58 144 C 74 164 96 178 120 178 C 148 178 170 156 170 128 C 170 108 158 92 140 84 L 154 48 C 188 62 210 92 210 128 Z"
           />
         </svg>
       </div>
@@ -78,4 +75,3 @@ export default function Logo({
     </div>
   )
 }
-
