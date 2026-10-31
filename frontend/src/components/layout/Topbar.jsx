@@ -18,8 +18,8 @@ export default function Topbar({ onMobileMenuClick }) {
   const { user, role, logout } = useAuth()
   const navigate = useNavigate()
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout(true)
     navigate('/login')
   }
 
