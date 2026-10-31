@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { TOKEN_KEY } from '@/api/client'
+import { getMe, logout as apiLogout } from '@/api/auth'
 import { pingAuth } from '@/api/system'
 
 const AuthContext = createContext(null)
@@ -7,24 +8,34 @@ const AuthContext = createContext(null)
 export function AuthProvider({ children }) {
   const [token, setToken] = useState(() => localStorage.getItem(TOKEN_KEY))
   const [user, setUser] = useState(null)
+  const [customer, setCustomer] = useState(null)
   const [role, setRole] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async (callApi = false) => {
+    if (callApi && localStorage.getItem(TOKEN_KEY)) {
+      try {
+        await apiLogout()
+      } catch {
+        // Ignore API failures on logout
+      }
+    }
     localStorage.removeItem(TOKEN_KEY)
     setToken(null)
     setUser(null)
+    setCustomer(null)
     setRole(null)
   }, [])
 
-  const login = useCallback((newToken, newUser) => {
+  const login = useCallback((newToken, newUser, newCustomer = null) => {
     localStorage.setItem(TOKEN_KEY, newToken)
     setToken(newToken)
     setUser(newUser)
+    setCustomer(newCustomer)
     setRole(newUser?.role || null)
   }, [])
 
-  const updateUser = useCallback((updatedUserData) => {
+  const updateUser = useCallback((updatedUserData, updatedCustomerData) => {
     setUser((prev) => {
       const merged = { ...prev, ...updatedUserData }
       if (merged.role) {
@@ -32,9 +43,12 @@ export function AuthProvider({ children }) {
       }
       return merged
     })
+    if (updatedCustomerData !== undefined) {
+      setCustomer(updatedCustomerData)
+    }
   }, [])
 
-  // Verify token on mount or token change
+  // Verify token and hydrate user on boot
   useEffect(() => {
     let isMounted = true
 
@@ -48,21 +62,31 @@ export function AuthProvider({ children }) {
       }
 
       try {
-        const response = await pingAuth()
+        // Try getMe (AUTH-04) first, fallback to pingAuth (SYS-02)
+        let authUser = null
+        let authCustomer = null
+        try {
+          const res = await getMe()
+          authUser = res?.data?.user
+          authCustomer = res?.data?.customer
+        } catch {
+          const pingRes = await pingAuth()
+          authUser = pingRes?.data?.user || pingRes?.data
+        }
+
         if (isMounted) {
-          const authUser = response?.data?.user || response?.data
           if (authUser) {
             setUser(authUser)
+            setCustomer(authCustomer)
             setRole(authUser.role)
             setToken(storedToken)
           } else {
-            logout()
+            logout(false)
           }
         }
       } catch {
-        // If 401 or network error on pingAuth
         if (isMounted) {
-          logout()
+          logout(false)
         }
       } finally {
         if (isMounted) {
@@ -75,7 +99,7 @@ export function AuthProvider({ children }) {
 
     const handleAuthLogout = () => {
       if (isMounted) {
-        logout()
+        logout(false)
       }
     }
 
@@ -88,6 +112,7 @@ export function AuthProvider({ children }) {
 
   const value = {
     user,
+    customer,
     role,
     token,
     isAuthenticated: Boolean(token && user),
