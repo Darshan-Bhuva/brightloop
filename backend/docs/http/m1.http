@@ -1,0 +1,163 @@
+@baseUrl = http://localhost:8000/api
+@token = paste-access-token-here
+# Get a token from AUTH-02 (or AUTH-01) and paste it into @token.
+# Seeded logins: admin@brightloop.test / Admin@12345, staff@brightloop.test / Staff@12345, customer@brightloop.test / Customer@12345
+# Ids below (1, 2) are placeholders; replace them with real ids from the list endpoints.
+
+### AUTH-01 Register (public)
+POST {{baseUrl}}/auth/register
+Accept: application/json
+Content-Type: application/json
+
+{
+  "name": "Riya Sharma",
+  "email": "riya@example.test",
+  "password": "Brightloop@2026",
+  "password_confirmation": "Brightloop@2026",
+  "phone": "+91 98765 43210",
+  "company_name": "Sharma Traders"
+}
+
+### AUTH-02 Login (public, throttle 10/min)
+POST {{baseUrl}}/auth/login
+Accept: application/json
+Content-Type: application/json
+
+{
+  "email": "admin@brightloop.test",
+  "password": "Admin@12345"
+}
+
+### AUTH-03 Logout (any auth)
+POST {{baseUrl}}/auth/logout
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### AUTH-04 Me (any auth)
+GET {{baseUrl}}/auth/me
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### AUTH-05 Forgot password (public, throttle 6/min). The reset link is written to storage/logs/laravel.log
+POST {{baseUrl}}/auth/forgot-password
+Accept: application/json
+Content-Type: application/json
+
+{
+  "email": "riya@example.test"
+}
+
+### AUTH-06 Reset password (public). Use token and email from the link in laravel.log
+POST {{baseUrl}}/auth/reset-password
+Accept: application/json
+Content-Type: application/json
+
+{
+  "token": "paste-reset-token-here",
+  "email": "riya@example.test",
+  "password": "NewPass@2026",
+  "password_confirmation": "NewPass@2026"
+}
+
+### AUTH-07 Update my profile (any auth; admin/staff: only name is applied)
+PUT {{baseUrl}}/auth/me
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Riya Sharma",
+  "phone": "+91 98765 43210",
+  "company_name": "Sharma Traders",
+  "address_line": "12 MG Road",
+  "city": "Pune",
+  "state": "Maharashtra",
+  "country": "India",
+  "postal_code": "411001"
+}
+
+### USR-01 List users (admin)
+GET {{baseUrl}}/users?role=staff&is_active=true&search=staff&sort=name&direction=asc&page=1&per_page=15
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### USR-02 Create staff (admin)
+POST {{baseUrl}}/users
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "New Staff",
+  "email": "new@brightloop.test",
+  "password": "Brightloop@2026",
+  "password_confirmation": "Brightloop@2026",
+  "role": "staff"
+}
+
+### USR-03 Show user (admin)
+GET {{baseUrl}}/users/2
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### USR-04 Update user (admin; email is immutable, cannot deactivate yourself)
+PUT {{baseUrl}}/users/2
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Staff Renamed",
+  "is_active": false
+}
+
+### CUS-01 List customers (admin, staff). Add all=1 for dropdown mode (max 500 rows, meta null)
+GET {{baseUrl}}/customers?search=acme&has_login=false&sort=name&direction=asc&page=1&per_page=15
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### CUS-02 Create customer (admin, staff)
+POST {{baseUrl}}/customers
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Wayne Enterprises",
+  "email": "wayne@example.test",
+  "phone": "+91 90000 00001",
+  "company_name": "Wayne Enterprises",
+  "address_line": "1 Marine Drive",
+  "city": "Mumbai",
+  "state": "Maharashtra",
+  "country": "India",
+  "postal_code": "400001"
+}
+
+### CUS-03 Show customer (admin, staff)
+GET {{baseUrl}}/customers/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### CUS-04 Update customer (admin, staff)
+PUT {{baseUrl}}/customers/1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Demo Customer",
+  "email": "customer@brightloop.test",
+  "phone": "+91 90000 00002",
+  "company_name": "Demo Co",
+  "address_line": "5 Park Street",
+  "city": "Kolkata",
+  "state": "West Bengal",
+  "country": "India",
+  "postal_code": "700016"
+}
+
+### CUS-05 Delete customer (admin; 409 if confirmed/active subscriptions or unpaid invoices)
+DELETE {{baseUrl}}/customers/1
+Accept: application/json
+Authorization: Bearer {{token}}
