@@ -4,6 +4,10 @@
 
 > Here is live Project link on vercel :- https://brightloop-odoo.vercel.app/
 
+```
+Credential is already set in form
+```
+
 Brightloop is organized as a clean monorepo containing a **Laravel 11 REST API** and a **React 19 + Vite** single-page application. Complete specifications, data dictionaries, and architectural guidelines are documented in [`docs/PLAN.md`](docs/PLAN.md).
 
 ---
