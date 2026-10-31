@@ -15,42 +15,44 @@ import {
  * Filters: status, customer_id, subscription_id, overdue, invoice_from, invoice_to, due_from, due_to, search
  * Sort: number|invoice_date|due_date|total|amount_due (default invoice_date desc)
  * @param {object} [params]
+ * @param {string} [role='admin']
  * @returns {Promise<{ success: boolean, message: string, data: object[], meta: object|null }>}
  */
-export async function getInvoices(params = {}) {
+export async function getInvoices(params = {}, role = 'admin') {
   return mockable(
     async () => {
       try {
         return await apiClient.get('/invoices', { params })
       } catch (err) {
         if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
-          return mockGetInvoices(params)
+          return mockGetInvoices(params, role)
         }
         throw err
       }
     },
-    () => mockGetInvoices(params)
+    () => mockGetInvoices(params, role)
   )
 }
 
 /**
  * INV-02 Show invoice (with lines, payments, and allowed_actions)
  * @param {number|string} id
+ * @param {string} [role='admin']
  * @returns {Promise<{ success: boolean, message: string, data: object }>}
  */
-export async function getInvoice(id) {
+export async function getInvoice(id, role = 'admin') {
   return mockable(
     async () => {
       try {
         return await apiClient.get(`/invoices/${id}`)
       } catch (err) {
         if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
-          return mockGetInvoice(id)
+          return mockGetInvoice(id, role)
         }
         throw err
       }
     },
-    () => mockGetInvoice(id)
+    () => mockGetInvoice(id, role)
   )
 }
 
@@ -160,4 +162,3 @@ export async function bulkConfirmInvoices(data) {
     () => mockBulkConfirmInvoices(data)
   )
 }
-

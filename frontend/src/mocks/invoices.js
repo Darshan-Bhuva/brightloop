@@ -319,7 +319,7 @@ export let mockInvoices = [
 /**
  * INV-01 List invoices (Admin, Staff all; Customer own, never draft)
  */
-export function mockGetInvoices(params = {}) {
+export function mockGetInvoices(params = {}, userRole = 'admin') {
   const {
     page = 1,
     per_page = 15,
@@ -334,13 +334,13 @@ export function mockGetInvoices(params = {}) {
     search,
     sort = 'invoice_date',
     direction = 'desc',
-    role = 'admin',
+    role = userRole,
   } = params
 
   let filtered = [...mockInvoices]
 
   // Customer role never sees draft invoices
-  if (role === 'customer') {
+  if (role === 'customer' || userRole === 'customer') {
     filtered = filtered.filter((inv) => inv.status !== 'draft')
   }
 
@@ -411,6 +411,7 @@ export function mockGetInvoices(params = {}) {
   })
 
   // Format to InvoiceListItem shape
+  const effectiveRole = role === 'customer' || userRole === 'customer' ? 'customer' : 'admin'
   const listItems = filtered.map((inv) => {
     const overdueState = computeInvoiceOverdue(inv)
     return {
@@ -432,7 +433,7 @@ export function mockGetInvoices(params = {}) {
       total: inv.total,
       amount_paid: inv.amount_paid,
       amount_due: inv.amount_due,
-      allowed_actions: computeInvoiceAllowedActions(inv, role),
+      allowed_actions: computeInvoiceAllowedActions(inv, effectiveRole),
     }
   })
 
@@ -450,9 +451,15 @@ export function mockGetInvoices(params = {}) {
 /**
  * INV-02 Show invoice
  */
-export function mockGetInvoice(id, role = 'admin') {
+export function mockGetInvoice(id, userRole = 'admin') {
   const inv = mockInvoices.find((i) => i.id === Number(id))
   if (!inv) {
+    const error = new Error('Invoice not found')
+    error.response = { status: 404, data: { success: false, message: 'Invoice not found', errors: null } }
+    throw error
+  }
+
+  if (userRole === 'customer' && inv.status === 'draft') {
     const error = new Error('Invoice not found')
     error.response = { status: 404, data: { success: false, message: 'Invoice not found', errors: null } }
     throw error
@@ -463,7 +470,7 @@ export function mockGetInvoice(id, role = 'admin') {
     ...inv,
     is_overdue: overdueState.is_overdue,
     days_overdue: overdueState.days_overdue,
-    allowed_actions: computeInvoiceAllowedActions(inv, role),
+    allowed_actions: computeInvoiceAllowedActions(inv, userRole),
   }
 
   return mockSuccessEnvelope(fullInvoice)
@@ -609,4 +616,3 @@ export function mockBulkConfirmInvoices(data = {}) {
 
   return mockSuccessEnvelope({ confirmed, skipped }, null, `Bulk confirm completed. ${confirmed} confirmed.`)
 }
-

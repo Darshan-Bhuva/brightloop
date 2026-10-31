@@ -1,79 +1,71 @@
 @baseUrl = http://localhost:8000/api
 @token = paste-access-token-here
-# Seeded logins:
-# Admin: admin@brightloop.test / Admin@12345
-# Staff: staff@brightloop.test / Staff@12345
-# Customer: customer@brightloop.test / Customer@12345
+# Get a token from AUTH-02 (POST /auth/login) and paste it into @token.
+# Seeded logins: admin@brightloop.test / Admin@12345, staff@brightloop.test / Staff@12345, customer@brightloop.test / Customer@12345
 
-### BIL-01 List due subscriptions (Admin, Staff)
-GET {{baseUrl}}/billing/due?as_of_date=2026-10-31&page=1&per_page=15
+### BIL-01 Preview due subscriptions for billing (A,S)
+GET {{baseUrl}}/billing/due?as_of_date=2026-02-01
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### BIL-02 Run recurring billing (Admin, Staff)
+### BIL-02 Run billing engine to generate invoices (A,S)
 POST {{baseUrl}}/billing/run
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "as_of_date": "2026-10-31",
-  "subscription_ids": [1, 2]
+  "as_of_date": "2026-02-01",
+  "subscription_ids": [1]
 }
 
-### INV-01 List invoices (Admin, Staff all; Customer own, never draft)
-GET {{baseUrl}}/invoices?status=draft&page=1&per_page=15
+### INV-01 List invoices with filters and overdue flags (A,S,C)
+GET {{baseUrl}}/invoices?page=1&per_page=15&status=Confirmed&overdue_only=false
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### INV-01 Overdue invoices filter
-GET {{baseUrl}}/invoices?overdue=true
-Accept: application/json
-Authorization: Bearer {{token}}
-
-### INV-02 Show invoice with lines and payments (Admin, Staff, Customer own)
+### INV-02 Show invoice details with lines, payments, and allowed actions (A,S,C)
 GET {{baseUrl}}/invoices/1
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### INV-03 Update draft invoice (Admin, Staff - P1)
-PUT {{baseUrl}}/invoices/3
+### INV-03 Update invoice draft details (A,S)
+PUT {{baseUrl}}/invoices/1
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "due_date": "2026-11-20",
-  "notes": "Updated payment terms agreed with accounts receivable."
+  "due_date": "2026-02-15",
+  "notes": "Updated invoice notes and terms"
 }
 
-### INV-04 Confirm draft invoice (Admin, Staff)
-POST {{baseUrl}}/invoices/3/confirm
+### INV-04 Confirm invoice draft to Confirmed or Paid (A,S)
+POST {{baseUrl}}/invoices/1/confirm
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### INV-05 Cancel invoice (Admin, Staff)
-POST {{baseUrl}}/invoices/3/cancel
+### INV-05 Cancel invoice and release discount usage (A,S)
+POST {{baseUrl}}/invoices/1/cancel
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "reason": "Customer requested adjustment to subscription terms."
+  "cancellation_reason": "Customer requested order adjustment"
 }
 
-### INV-06 Send invoice to customer email (Admin, Staff)
-POST {{baseUrl}}/invoices/2/send
+### INV-06 Send invoice to customer via email (A,S)
+POST {{baseUrl}}/invoices/1/send
 Accept: application/json
 Authorization: Bearer {{token}}
 
-### INV-07 Bulk confirm draft invoices (Admin, Staff - P1)
+### INV-07 Bulk confirm draft invoices (A,S)
 POST {{baseUrl}}/invoices/bulk-confirm
 Accept: application/json
 Content-Type: application/json
 Authorization: Bearer {{token}}
 
 {
-  "ids": [3, 4]
+  "invoice_ids": [1, 2]
 }
-
