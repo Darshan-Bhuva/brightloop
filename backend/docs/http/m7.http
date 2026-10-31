@@ -22,3 +22,4 @@ Authorization: Bearer {{token}}
 GET {{baseUrl}}/portal/summary
 Accept: application/json
 Authorization: Bearer {{customerToken}}
+
