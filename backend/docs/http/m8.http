@@ -1,0 +1,30 @@
+@baseUrl = http://localhost:8000/api
+@token = paste-access-token-here
+# Get a token from AUTH-02 (POST /auth/login) and paste it into @token.
+# Seeded logins: admin@brightloop.test / Admin@12345, staff@brightloop.test / Staff@12345, customer@brightloop.test / Customer@12345
+# M8 Hardening & Performance Verification: Run `php artisan db:seed --class=DemoVolumeSeeder` prior to testing with high volume (3k subs, 8k invoices).
+
+### M8-01 Performance: List subscriptions with eager loading (< 2s on 3,000+ records)
+GET {{baseUrl}}/subscriptions?page=1&per_page=15&sort=created_at&direction=desc
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### M8-02 Performance: List invoices with customer & subscription eager loaded (< 2s on 8,000+ records)
+GET {{baseUrl}}/invoices?page=1&per_page=15&sort=invoice_date&direction=desc
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### M8-03 Performance: Filter overdue invoices with composite index scan
+GET {{baseUrl}}/invoices?page=1&per_page=15&overdue=true
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### M8-04 Hardening: Billing run execution against volume subscriptions
+POST {{baseUrl}}/billing/run
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "as_of_date": "2026-03-01"
+}
