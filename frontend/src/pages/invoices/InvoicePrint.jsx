@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { getInvoice } from '@/api/invoices'
 import { formatDate } from '@/lib/format'
 import { MoneyText } from '@/components/common/MoneyText'
+import Logo from '@/components/common/Logo'
 
 export default function InvoicePrint() {
   const { id } = useParams()
