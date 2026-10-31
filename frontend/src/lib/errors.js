@@ -40,3 +40,13 @@ export function handleApiError(error, setError) {
   toast.error(message)
 }
 
+
+/**
+ * Extract human-readable error message from error object.
+ * @param {Error} error
+ * @param {string} [defaultMessage='An unexpected error occurred']
+ * @returns {string}
+ */
+export function getErrorMessage(error, defaultMessage = 'An unexpected error occurred') {
+  return error?.response?.data?.message || error?.message || defaultMessage
+}
