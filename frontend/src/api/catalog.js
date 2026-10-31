@@ -14,21 +14,24 @@ import {
   createMockProduct,
   updateMockProduct,
   deleteMockProduct,
-  mockPlans,
-  mockDiscounts,
+  getMockPlans,
+  getMockPlan,
+  createMockPlan,
+  updateMockPlan,
+  deleteMockPlan,
+  getMockDiscounts,
+  getMockDiscount,
+  createMockDiscount,
+  updateMockDiscount,
+  deleteMockDiscount,
   mockTaxes,
   mockPaymentTerms,
-  mockProducts,
 } from '@/mocks/catalog';
 
 // ============================================================================
 // TAXES (TAX-01 .. TAX-04)
 // ============================================================================
 
-/**
- * TAX-01 List taxes (Admin, Staff)
- * @param {object} [params] - { is_active, search, all }
- */
 export async function getTaxes(params = {}) {
   return mockable(
     async () => {
@@ -45,10 +48,6 @@ export async function getTaxes(params = {}) {
   );
 }
 
-/**
- * TAX-02 Create tax (Admin only)
- * @param {{ name: string, type: 'percentage'|'fixed', rate: number|string, is_active?: boolean }} data
- */
 export async function createTax(data) {
   return mockable(
     () => apiClient.post('/taxes', data),
@@ -56,11 +55,6 @@ export async function createTax(data) {
   );
 }
 
-/**
- * TAX-03 Update tax (Admin only)
- * @param {number|string} id
- * @param {{ name?: string, type?: 'percentage'|'fixed', rate?: number|string, is_active?: boolean }} data
- */
 export async function updateTax(id, data) {
   return mockable(
     () => apiClient.put(`/taxes/${id}`, data),
@@ -68,10 +62,6 @@ export async function updateTax(id, data) {
   );
 }
 
-/**
- * TAX-04 Delete tax (Admin only)
- * @param {number|string} id
- */
 export async function deleteTax(id) {
   return mockable(
     () => apiClient.delete(`/taxes/${id}`),
@@ -80,13 +70,9 @@ export async function deleteTax(id) {
 }
 
 // ============================================================================
-// PAYMENT TERMS (PT-01 .. PT-04)
+// PAYMENT TERMS (TRM-01 .. TRM-04)
 // ============================================================================
 
-/**
- * PT-01 List payment terms (Admin, Staff)
- * @param {object} [params] - { all, search }
- */
 export async function getPaymentTerms(params = {}) {
   return mockable(
     async () => {
@@ -103,10 +89,6 @@ export async function getPaymentTerms(params = {}) {
   );
 }
 
-/**
- * PT-02 Create payment term (Admin only)
- * @param {{ name: string, due_days: number }} data
- */
 export async function createPaymentTerm(data) {
   return mockable(
     () => apiClient.post('/payment-terms', data),
@@ -114,11 +96,6 @@ export async function createPaymentTerm(data) {
   );
 }
 
-/**
- * PT-03 Update payment term (Admin only)
- * @param {number|string} id
- * @param {{ name?: string, due_days?: number }} data
- */
 export async function updatePaymentTerm(id, data) {
   return mockable(
     () => apiClient.put(`/payment-terms/${id}`, data),
@@ -126,10 +103,6 @@ export async function updatePaymentTerm(id, data) {
   );
 }
 
-/**
- * PT-04 Delete payment term (Admin only)
- * @param {number|string} id
- */
 export async function deletePaymentTerm(id) {
   return mockable(
     () => apiClient.delete(`/payment-terms/${id}`),
@@ -138,13 +111,9 @@ export async function deletePaymentTerm(id) {
 }
 
 // ============================================================================
-// PRODUCTS & VARIANTS (PRD-01 .. PRD-05)
+// PRODUCTS (PRD-01 .. PRD-05)
 // ============================================================================
 
-/**
- * PRD-01 List products (Admin, Staff)
- * @param {object} [params] - { type, is_active, search, sort, direction, page, per_page, all }
- */
 export async function getProducts(params = {}) {
   return mockable(
     async () => {
@@ -152,7 +121,7 @@ export async function getProducts(params = {}) {
         return await apiClient.get('/products', { params });
       } catch (err) {
         if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
-          return mockSuccessEnvelope(mockProducts);
+          return getMockProducts(params);
         }
         throw err;
       }
@@ -161,21 +130,22 @@ export async function getProducts(params = {}) {
   );
 }
 
-/**
- * PRD-03 Show product (Admin, Staff)
- * @param {number|string} id
- */
 export async function getProduct(id) {
   return mockable(
-    () => apiClient.get(`/products/${id}`),
+    async () => {
+      try {
+        return await apiClient.get(`/products/${id}`);
+      } catch (err) {
+        if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
+          return getMockProduct(id);
+        }
+        throw err;
+      }
+    },
     () => getMockProduct(id)
   );
 }
 
-/**
- * PRD-02 Create product (Admin only)
- * @param {{ name: string, type: 'service'|'goods', sales_price: number|string, cost_price: number|string, tax_id?: number|null, notes?: string, is_active?: boolean, variants?: Array<{ attribute: string, value: string, extra_price?: number|string }> }} data
- */
 export async function createProduct(data) {
   return mockable(
     () => apiClient.post('/products', data),
@@ -183,11 +153,6 @@ export async function createProduct(data) {
   );
 }
 
-/**
- * PRD-04 Update product (Admin only)
- * @param {number|string} id
- * @param {object} data
- */
 export async function updateProduct(id, data) {
   return mockable(
     () => apiClient.put(`/products/${id}`, data),
@@ -195,10 +160,6 @@ export async function updateProduct(id, data) {
   );
 }
 
-/**
- * PRD-05 Delete product (Admin only)
- * @param {number|string} id
- */
 export async function deleteProduct(id) {
   return mockable(
     () => apiClient.delete(`/products/${id}`),
@@ -207,12 +168,9 @@ export async function deleteProduct(id) {
 }
 
 // ============================================================================
-// PLANS (PLN-01) - for quotation & subscription selection
+// PLANS (PLN-01 .. PLN-05)
 // ============================================================================
 
-/**
- * Fetch plans list (supports all=1)
- */
 export async function getPlans(params = {}) {
   return mockable(
     async () => {
@@ -220,22 +178,56 @@ export async function getPlans(params = {}) {
         return await apiClient.get('/plans', { params });
       } catch (err) {
         if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
-          return mockSuccessEnvelope(mockPlans);
+          return getMockPlans(params);
         }
         throw err;
       }
     },
-    () => mockSuccessEnvelope(mockPlans)
+    () => getMockPlans(params)
+  );
+}
+
+export async function getPlan(id) {
+  return mockable(
+    async () => {
+      try {
+        return await apiClient.get(`/plans/${id}`);
+      } catch (err) {
+        if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
+          return getMockPlan(id);
+        }
+        throw err;
+      }
+    },
+    () => getMockPlan(id)
+  );
+}
+
+export async function createPlan(data) {
+  return mockable(
+    () => apiClient.post('/plans', data),
+    () => createMockPlan(data)
+  );
+}
+
+export async function updatePlan(id, data) {
+  return mockable(
+    () => apiClient.put(`/plans/${id}`, data),
+    () => updateMockPlan(id, data)
+  );
+}
+
+export async function deletePlan(id) {
+  return mockable(
+    () => apiClient.delete(`/plans/${id}`),
+    () => deleteMockPlan(id)
   );
 }
 
 // ============================================================================
-// DISCOUNTS (DSC-01) - for subscription discounts selection
+// DISCOUNTS (DSC-01 .. DSC-05)
 // ============================================================================
 
-/**
- * Fetch discounts list (supports all=1)
- */
 export async function getDiscounts(params = {}) {
   return mockable(
     async () => {
@@ -243,11 +235,48 @@ export async function getDiscounts(params = {}) {
         return await apiClient.get('/discounts', { params });
       } catch (err) {
         if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
-          return mockSuccessEnvelope(mockDiscounts);
+          return getMockDiscounts(params);
         }
         throw err;
       }
     },
-    () => mockSuccessEnvelope(mockDiscounts)
+    () => getMockDiscounts(params)
+  );
+}
+
+export async function getDiscount(id) {
+  return mockable(
+    async () => {
+      try {
+        return await apiClient.get(`/discounts/${id}`);
+      } catch (err) {
+        if (err.response?.status === 404 || err.code === 'ERR_NETWORK') {
+          return getMockDiscount(id);
+        }
+        throw err;
+      }
+    },
+    () => getMockDiscount(id)
+  );
+}
+
+export async function createDiscount(data) {
+  return mockable(
+    () => apiClient.post('/discounts', data),
+    () => createMockDiscount(data)
+  );
+}
+
+export async function updateDiscount(id, data) {
+  return mockable(
+    () => apiClient.put(`/discounts/${id}`, data),
+    () => updateMockDiscount(id, data)
+  );
+}
+
+export async function deleteDiscount(id) {
+  return mockable(
+    () => apiClient.delete(`/discounts/${id}`),
+    () => deleteMockDiscount(id)
   );
 }
