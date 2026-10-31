@@ -24,6 +24,7 @@ import { StatusBadge } from '@/components/common/StatusBadge'
 import { MoneyText } from '@/components/common/MoneyText'
 import { DateText } from '@/components/common/DateText'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { RecordPaymentDialog } from '@/components/common/RecordPaymentDialog'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
@@ -64,6 +65,7 @@ export default function InvoiceDetail() {
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [sendDialogOpen, setSendDialogOpen] = useState(false)
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false)
 
   // Edit draft dialog state
   const [editDialogOpen, setEditDialogOpen] = useState(false)
@@ -214,6 +216,17 @@ export default function InvoiceDetail() {
             >
               <CheckCircle className="mr-1.5 h-4 w-4" />
               Confirm Invoice
+            </Button>
+          )}
+
+          {allowed.includes('record_payment') && (
+            <Button
+              size="sm"
+              onClick={() => setIsPaymentDialogOpen(true)}
+              className="bg-primary hover:bg-primary/90 text-white"
+            >
+              <CreditCard className="mr-1.5 h-4 w-4" />
+              Record Payment
             </Button>
           )}
 
@@ -590,6 +603,14 @@ export default function InvoiceDetail() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Record Payment Dialog (Module M6) */}
+      <RecordPaymentDialog
+        open={isPaymentDialogOpen}
+        onOpenChange={setIsPaymentDialogOpen}
+        invoice={invoice}
+        onSuccess={() => fetchInvoiceDetails()}
+      />
 
       {/* Confirm Invoice Dialog */}
       <ConfirmDialog
