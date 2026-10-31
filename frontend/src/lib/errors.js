@@ -39,3 +39,4 @@ export function handleApiError(error, setError) {
   const message = data?.message || error?.message || 'An unexpected error occurred'
   toast.error(message)
 }
+

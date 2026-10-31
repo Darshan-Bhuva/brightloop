@@ -100,3 +100,4 @@ export const customerSchema = z.object({
   country: z.string().max(100).optional().nullable().or(z.literal('')),
   postal_code: z.string().max(20).optional().nullable().or(z.literal('')),
 })
+

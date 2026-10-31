@@ -8,3 +8,4 @@ import apiClient from './client'
 export async function getSubscriptions(params = {}) {
   return apiClient.get('/subscriptions', { params })
 }
+

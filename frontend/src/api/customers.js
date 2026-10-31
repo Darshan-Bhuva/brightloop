@@ -47,3 +47,4 @@ export async function updateCustomer(id, data) {
 export async function deleteCustomer(id) {
   return apiClient.delete(`/customers/${id}`)
 }
+

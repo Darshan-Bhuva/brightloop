@@ -60,3 +60,4 @@ export async function resetPassword(data) {
 export async function updateProfile(data) {
   return apiClient.put('/auth/me', data)
 }
+

@@ -38,3 +38,4 @@ export async function getUser(id) {
 export async function updateUser(id, data) {
   return apiClient.put(`/users/${id}`, data)
 }
+
