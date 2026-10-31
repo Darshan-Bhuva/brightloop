@@ -1,0 +1,13 @@
+@baseUrl = http://localhost:8000/api
+@token = paste-access-token-here
+# migrate:fresh empties oauth_clients. Before issuing tokens, run:
+# php artisan passport:client --personal --name="Brightloop Personal Access Client" --provider=users --no-interaction
+
+### SYS-01 Ping (public)
+GET {{baseUrl}}/ping
+Accept: application/json
+
+### SYS-02 Ping auth (any logged-in user)
+GET {{baseUrl}}/ping/auth
+Accept: application/json
+Authorization: Bearer {{token}}
