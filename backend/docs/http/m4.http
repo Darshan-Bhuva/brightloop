@@ -1,0 +1,189 @@
+@baseUrl = http://localhost:8000/api
+@token = paste-access-token-here
+# Get a token from AUTH-02 and paste it into @token.
+# Seeded logins: admin@brightloop.test / Admin@12345, staff@brightloop.test / Staff@12345, customer@brightloop.test / Customer@12345
+# Ids below (1, 2) are placeholders; replace them with real ids from the list endpoints.
+
+### TPL-01 List quotation templates (Admin, Staff)
+GET {{baseUrl}}/quotation-templates?all=1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### TPL-02 Create quotation template (Admin, Staff)
+POST {{baseUrl}}/quotation-templates
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Standard SMB Offer",
+  "validity_days": 14,
+  "plan_id": 1,
+  "notes": "Standard SMB onboarding offer",
+  "lines": [
+    {
+      "product_id": 2,
+      "variant_id": null,
+      "quantity": 2
+    },
+    {
+      "product_id": 3,
+      "variant_id": null,
+      "quantity": 1
+    }
+  ]
+}
+
+### TPL-03 Show quotation template (Admin, Staff)
+GET {{baseUrl}}/quotation-templates/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### TPL-04 Update quotation template (Admin, Staff)
+PUT {{baseUrl}}/quotation-templates/1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "name": "Updated Standard SMB Offer",
+  "validity_days": 21,
+  "plan_id": 1,
+  "notes": "Updated SMB onboarding package",
+  "lines": [
+    {
+      "product_id": 2,
+      "variant_id": null,
+      "quantity": 3
+    }
+  ]
+}
+
+### TPL-05 Delete quotation template (Admin, Staff)
+DELETE {{baseUrl}}/quotation-templates/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### SUB-01 List subscriptions (Admin, Staff all; Customer own)
+GET {{baseUrl}}/subscriptions?status=active&page=1&per_page=15
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### SUB-02 Create subscription (Admin, Staff)
+POST {{baseUrl}}/subscriptions
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": 1,
+  "plan_id": 1,
+  "payment_term_id": 1,
+  "start_date": "2026-11-01",
+  "expiry_date": "2027-10-31",
+  "notes": "Acme annual contract",
+  "lines": [
+    {
+      "product_id": 2,
+      "variant_id": null,
+      "quantity": 2
+    },
+    {
+      "product_id": 3,
+      "variant_id": null,
+      "quantity": 1
+    }
+  ]
+}
+
+### SUB-03 Show subscription (Admin, Staff; Customer own)
+GET {{baseUrl}}/subscriptions/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### SUB-04 Update subscription (Admin, Staff - only draft or quotation)
+PUT {{baseUrl}}/subscriptions/1
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "customer_id": 1,
+  "plan_id": 1,
+  "payment_term_id": 1,
+  "start_date": "2026-11-01",
+  "expiry_date": "2027-10-31",
+  "notes": "Acme updated draft",
+  "lines": [
+    {
+      "product_id": 2,
+      "variant_id": null,
+      "quantity": 3
+    }
+  ]
+}
+
+### SUB-05 Delete subscription (Admin, Staff - only draft)
+DELETE {{baseUrl}}/subscriptions/1
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### SUB-06 Send quotation (Admin, Staff - draft -> quotation)
+POST {{baseUrl}}/subscriptions/1/send-quotation
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### SUB-07 Confirm subscription (Admin, Staff - quotation -> confirmed)
+POST {{baseUrl}}/subscriptions/1/confirm
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### SUB-08 Activate subscription (Admin, Staff - confirmed -> active)
+POST {{baseUrl}}/subscriptions/1/activate
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### SUB-09 Pause subscription (Admin, Staff, Customer own)
+POST {{baseUrl}}/subscriptions/1/pause
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### SUB-10 Resume subscription (Admin, Staff, Customer own)
+POST {{baseUrl}}/subscriptions/1/resume
+Accept: application/json
+Authorization: Bearer {{token}}
+
+### SUB-11 Close subscription (Admin, Staff, Customer own)
+POST {{baseUrl}}/subscriptions/1/close
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "reason": "Customer requested cancellation"
+}
+
+### SUB-12 Renew subscription (Admin, Staff, Customer own)
+POST {{baseUrl}}/subscriptions/1/renew
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "new_expiry_date": "2028-10-31"
+}
+
+### SUB-13 Attach discount (Admin, Staff)
+POST {{baseUrl}}/subscriptions/1/discounts
+Accept: application/json
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "discount_id": 2
+}
+
+### SUB-14 Detach discount (Admin, Staff)
+DELETE {{baseUrl}}/subscriptions/1/discounts/2
+Accept: application/json
+Authorization: Bearer {{token}}

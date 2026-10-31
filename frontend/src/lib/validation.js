@@ -101,3 +101,76 @@ export const customerSchema = z.object({
   postal_code: z.string().max(20).optional().nullable().or(z.literal('')),
 })
 
+
+// -------------------------------------------------------------
+// Module M4: Quotation Templates & Subscriptions Validation
+// -------------------------------------------------------------
+
+export const quotationTemplateLineSchema = z.object({
+  product_id: z.coerce.number().min(1, 'Product is required'),
+  variant_id: z.coerce.number().optional().nullable().or(z.literal('')),
+  quantity: z.coerce.number().min(1, 'Quantity must be at least 1'),
+})
+
+export const quotationTemplateSchema = z.object({
+  name: z.string().min(1, 'Template name is required').max(255),
+  validity_days: z.coerce.number().min(1, 'Validity must be at least 1 day').max(365, 'Validity cannot exceed 365 days'),
+  plan_id: z.coerce.number().min(1, 'Plan is required'),
+  notes: z.string().optional().nullable().or(z.literal('')),
+  lines: z.array(quotationTemplateLineSchema).min(1, 'At least one product line is required'),
+})
+
+export const subscriptionLineSchema = z.object({
+  product_id: z.coerce.number().min(1, 'Product is required'),
+  variant_id: z.coerce.number().optional().nullable().or(z.literal('')),
+  quantity: z.coerce.number().min(1, 'Quantity must be at least 1'),
+})
+
+export const subscriptionSchema = z
+  .object({
+    customer_id: z.coerce.number().min(1, 'Customer is required'),
+    plan_id: z.coerce.number().optional().nullable().or(z.literal('')),
+    quotation_template_id: z.coerce.number().optional().nullable().or(z.literal('')),
+    payment_term_id: z.coerce.number().min(1, 'Payment term is required'),
+    start_date: z.string().min(1, 'Start date is required'),
+    expiry_date: z.string().min(1, 'Expiry date is required'),
+    notes: z.string().optional().nullable().or(z.literal('')),
+    lines: z.array(subscriptionLineSchema).optional(),
+  })
+  .refine(
+    (data) => {
+      // plan_id is required unless quotation_template_id is provided
+      if (!data.quotation_template_id && (!data.plan_id || Number(data.plan_id) <= 0)) {
+        return false
+      }
+      return true
+    },
+    {
+      message: 'Plan is required when no quotation template is selected',
+      path: ['plan_id'],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.start_date && data.expiry_date) {
+        return data.expiry_date > data.start_date
+      }
+      return true
+    },
+    {
+      message: 'Expiry date must be after start date',
+      path: ['expiry_date'],
+    }
+  )
+
+export const subscriptionCloseSchema = z.object({
+  reason: z.string().max(255, 'Reason cannot exceed 255 characters').optional().or(z.literal('')),
+})
+
+export const subscriptionRenewSchema = z.object({
+  new_expiry_date: z.string().min(1, 'New expiry date is required'),
+})
+
+export const subscriptionDiscountSchema = z.object({
+  discount_id: z.coerce.number().min(1, 'Discount is required'),
+})
