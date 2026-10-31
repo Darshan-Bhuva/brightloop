@@ -2,8 +2,11 @@
 
 namespace App\Models;
 
+use App\Enums\SubscriptionStatus;
+use Closure;
 use Database\Factories\CustomerFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -34,5 +37,17 @@ class Customer extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * Relation-count definition for withCount()/loadCount(): subscriptions in status `active`.
+     *
+     * @return array<string, Closure(Builder): void>
+     */
+    public static function activeSubscriptionsCount(): array
+    {
+        return [
+            'subscriptions as active_subscriptions_count' => fn (Builder $query) => $query->where('status', SubscriptionStatus::Active),
+        ];
     }
 }

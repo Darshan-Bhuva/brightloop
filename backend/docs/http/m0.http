@@ -1,0 +1,12 @@
+@baseUrl = http://localhost:8000/api
+@token = paste-access-token-here
+# The personal access client is created by PassportClientSeeder (php artisan migrate:fresh --seed); no manual passport:client step.
+
+### SYS-01 Ping (public)
+GET {{baseUrl}}/ping
+Accept: application/json
+
+### SYS-02 Ping auth (any logged-in user)
+GET {{baseUrl}}/ping/auth
+Accept: application/json
+Authorization: Bearer {{token}}
