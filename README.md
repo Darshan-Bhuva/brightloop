@@ -1,23 +1,6 @@
 # Brightloop
 
 > Production-grade subscription management, recurring billing, customer portal, and invoice lifecycle platform.
-> Here is live Project link on vercel :- https://brightloop-odoo.vercel.app/
-
-### Credential 
-Admin
-```
-Admin
-Email:- emailadmin@brightloop.test
-Password:- password
-
-Staff
-Email:- staff@brightloop.test
-Password:- password
-
-Customer
-Email:- customer@brightloop.test
-Password:- Customer@12345
-```
 
 Brightloop is organized as a clean monorepo containing a **Laravel 11 REST API** and a **React 19 + Vite** single-page application. Complete specifications, data dictionaries, and architectural guidelines are documented in [`docs/PLAN.md`](docs/PLAN.md).
 
