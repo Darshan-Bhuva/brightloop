@@ -6,10 +6,10 @@ Brightloop Subscription & Invoicing Management System backend powered by Laravel
 
 ## 1. Requirements
 
-- **PHP**: 8.3+
+- **PHP**: 8.4.1+
 - **PostgreSQL**: 15+
 - **Composer**: 2.x
-- **Extensions**: `pdo_pgsql`, `pgsql`, `bcmath`, `ctype`, `fileinfo`, `json`, `mbstring`, `openssl`, `tokenizer`, `xml`
+- **Extensions**: `pdo_pgsql`, `pgsql`, `bcmath`, `ctype`, `fileinfo`, `json`, `mbstring`, `openssl`, `sodium`, `tokenizer`, `xml`
 
 ---
 
