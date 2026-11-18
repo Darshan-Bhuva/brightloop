@@ -39,7 +39,7 @@ COPY --from=node:22 /usr/local/lib/node_modules /usr/local/lib/node_modules
 
 RUN ln -s /usr/local/lib/node_modules/npm/bin/npm-cli.js /usr/local/bin/npm
 
-RUN npm install && npm run build
+# RUN npm install && npm run build
 
 # Configure Apache to serve Laravel public directory
 ENV APACHE_DOCUMENT_ROOT=/var/www/html/public
